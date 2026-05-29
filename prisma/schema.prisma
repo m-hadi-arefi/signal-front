@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MEMBER
+  ANALYST
+  ADMIN
+}
+
+enum Direction {
+  LONG
+  SHORT
+  NEUTRAL
+}
+
+enum EntryType {
+  MARKET
+  LIMIT
+  STOP
+}
+
+enum SignalStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum ScenarioStatus {
+  ACTIVE
+  INVALIDATED
+  HIT_TP
+  HIT_SL
+}
+
+enum CommentStatus {
+  ACTIVE
+  DELETED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  username     String    @unique
+  passwordHash String
+  role         Role      @default(MEMBER)
+  avatar       String?
+  bio          String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  signals       Signal[]
+  comments      Comment[]
+  likes         Like[]
+  notifications Notification[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+}
+
+model Signal {
+  id                 String      @id @default(cuid())
+  symbol             String
+  traceId            String?     @unique
+  source             String?
+  rawText            String
+  aiSummary          String?
+  currentMarketPrice Float?
+  authorId           String
+  author             User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  status             SignalStatus @default(OPEN)
+  createdAt          DateTime    @default(now())
+  analyzedAt         DateTime?
+  updatedAt          DateTime    @updatedAt
+
+  scenarios Scenario[]
+  comments  Comment[]
+  likes     Like[]
+
+  @@index([authorId])
+  @@index([symbol])
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model Scenario {
+  id           String         @id @default(cuid())
+  signalId     String
+  signal       Signal         @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  direction    Direction
+  entryPoint   Float
+  entryType    EntryType      @default(LIMIT)
+  takeProfits  Json
+  stopLoss     Float
+  invalidation String?
+  confidence   Int
+  reasoning    String
+  status       ScenarioStatus @default(ACTIVE)
+  raw          String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  result ScenarioResult?
+
+  @@index([signalId])
+}
+
+model ScenarioResult {
+  id          String   @id @default(cuid())
+  scenarioId  String   @unique
+  scenario    Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  result      String
+  pnlPercent  Float?
+  hitTp       Int?
+  hitSl       Boolean  @default(false)
+  maxDrawdown Float?
+  evaluatedAt DateTime @default(now())
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  signalId  String
+  signal    Signal        @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?      @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("Replies")
+  content   String
+  status    CommentStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  likes Like[]
+
+  @@index([signalId, createdAt])
+  @@index([parentId])
+  @@index([authorId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signalId  String?
+  signal    Signal?  @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, signalId])
+  @@unique([userId, commentId])
+  @@index([signalId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
