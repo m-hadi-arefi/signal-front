@@ -16,12 +16,14 @@ import { useMqtt } from "@/hooks/useMqtt";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api-client";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export default function SignalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
+  const { t, dir } = useLanguage();
   const [signal, setSignal] = useState<SignalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
@@ -37,35 +39,26 @@ export default function SignalDetailPage() {
     fetch(`/api/signals/${id}`)
       .then((r) => r.json())
       .then(({ data }) => {
-        if (data) {
-          setSignal(data);
-          setLiked(data.isLiked ?? false);
-          setLikeCount(data._count?.likes ?? 0);
-        }
+        if (data) { setSignal(data); setLiked(data.isLiked ?? false); setLikeCount(data._count?.likes ?? 0); }
         setLoading(false);
       });
   }, [id]);
 
   useMqtt([`signals/${id}`], (_, payload: unknown) => {
     const event = payload as { type: string; payload: { count: number; liked: boolean } };
-    if (event.type === "LIKE_UPDATE") {
-      setLikeCount(event.payload.count);
-    }
+    if (event.type === "LIKE_UPDATE") setLikeCount(event.payload.count);
   });
 
   const handleLike = async () => {
-    if (!user) { toast.error("Sign in to like signals"); return; }
+    if (!user) { toast.error(t("signal.sign_in_to_like")); return; }
     if (likeLoading) return;
     setLikeLoading(true);
     const res = await apiFetch(`/api/signals/${id}/like`, { method: "POST" });
     if (res.ok) {
       const { liked: l, count } = await res.json();
-      setLiked(l);
-      setLikeCount(count);
-      toast.success(l ? "Liked!" : "Like removed");
-    } else {
-      toast.error("Failed to like");
-    }
+      setLiked(l); setLikeCount(count);
+      toast.success(l ? t("signal.liked") : t("signal.like_removed"));
+    } else { toast.error(t("signal.failed_like")); }
     setLikeLoading(false);
   };
 
@@ -74,10 +67,7 @@ export default function SignalDetailPage() {
 
   const startEdit = () => {
     if (!signal) return;
-    setEditRaw(signal.rawText);
-    setEditSummary(signal.aiSummary || "");
-    setEditing(true);
-    setMenuOpen(false);
+    setEditRaw(signal.rawText); setEditSummary(signal.aiSummary || ""); setEditing(true); setMenuOpen(false);
   };
 
   const saveEdit = async () => {
@@ -90,43 +80,36 @@ export default function SignalDetailPage() {
       });
       if (res.ok) {
         setSignal((s) => (s ? { ...s, rawText: editRaw, aiSummary: editSummary || null } : s));
-        setEditing(false);
-        toast.success("Signal updated");
+        setEditing(false); toast.success(t("signal.signal_updated"));
       } else {
         const { error } = await res.json().catch(() => ({ error: "Failed" }));
         toast.error(error || "Failed to update");
       }
-    } finally {
-      setSavingEdit(false);
-    }
+    } finally { setSavingEdit(false); }
   };
 
   const handleDelete = async () => {
     setMenuOpen(false);
-    if (!confirm("Delete this signal?")) return;
+    if (!confirm(t("signal.delete_confirm"))) return;
     const res = await apiFetch(`/api/signals/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Signal deleted");
-      router.push("/feed");
-    } else {
-      toast.error("Failed to delete");
-    }
+    if (res.ok) { toast.success(t("signal.signal_deleted")); router.push("/feed"); }
+    else toast.error("Failed to delete");
   };
 
-  if (loading) return (
-    <div className="flex justify-center items-center py-32"><Spinner className="text-indigo-400 w-8 h-8" /></div>
-  );
-
-  if (!signal) return (
-    <div className="text-center py-32 text-white/40">Signal not found</div>
-  );
+  if (loading) return <div className="flex justify-center items-center py-32"><Spinner className="text-indigo-400 w-8 h-8" /></div>;
+  if (!signal) return <div className="text-center py-32 text-white/40">{t("signal.not_found")}</div>;
 
   const isOfficial = signal.author.role === "ADMIN" || signal.author.role === "ANALYST";
+
+  const dirLabel = (d: string) =>
+    d === "LONG" ? `▲ ${t("signal.long")}` : d === "SHORT" ? `▼ ${t("signal.short")}` : `— ${t("signal.neutral")}`;
 
   return (
     <div className="max-w-3xl mx-auto">
       <Link href="/feed" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white mb-6 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Feed
+        {dir === "rtl" ? null : <ArrowLeft className="w-4 h-4" />}
+        {t("signal.back_to_feed")}
+        {dir === "rtl" ? <ArrowLeft className="w-4 h-4 rotate-180" /> : null}
       </Link>
 
       <div className="rounded-2xl border border-white/10 bg-white/3 p-4 sm:p-6 mb-6">
@@ -143,7 +126,7 @@ export default function SignalDetailPage() {
                 </Link>
                 {isOfficial && (
                   <span className="inline-flex items-center gap-1 text-xs text-indigo-400 bg-indigo-600/20 px-2 py-0.5 rounded-full">
-                    <Shield className="w-3 h-3" /> Official
+                    <Shield className="w-3 h-3" /> {t("common.official_badge")}
                   </span>
                 )}
               </div>
@@ -157,28 +140,18 @@ export default function SignalDetailPage() {
             )}
             {canModify && (
               <div className="relative">
-                <button
-                  onClick={() => setMenuOpen((o) => !o)}
-                  className="text-white/40 hover:text-white p-1"
-                  aria-label="Options"
-                >
+                <button onClick={() => setMenuOpen((o) => !o)} className="text-white/40 hover:text-white p-1" aria-label="Options">
                   <MoreVertical className="w-4 h-4" />
                 </button>
                 {menuOpen && (
-                  <div className="absolute right-0 mt-1 w-32 rounded-lg border border-white/10 bg-[#0d0d14] shadow-xl z-20 py-1">
+                  <div className="absolute end-0 mt-1 w-36 rounded-lg border border-white/10 bg-[#0d0d14] shadow-xl z-20 py-1">
                     {canEdit && (
-                      <button
-                        onClick={startEdit}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-white/80 hover:bg-white/5"
-                      >
-                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      <button onClick={startEdit} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-white/80 hover:bg-white/5">
+                        <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
                       </button>
                     )}
-                    <button
-                      onClick={handleDelete}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-white/5"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    <button onClick={handleDelete} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-white/5">
+                      <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
                     </button>
                   </div>
                 )}
@@ -191,32 +164,30 @@ export default function SignalDetailPage() {
         {editing ? (
           <div className="mb-6 space-y-3">
             <div>
-              <label className="block text-xs text-white/50 mb-1.5">Summary</label>
+              <label className="block text-xs text-white/50 mb-1.5">{t("signal.edit_summary")}</label>
               <Textarea rows={2} value={editSummary} onChange={(e) => setEditSummary(e.target.value)} />
             </div>
             <div>
-              <label className="block text-xs text-white/50 mb-1.5">Analysis</label>
+              <label className="block text-xs text-white/50 mb-1.5">{t("signal.edit_analysis")}</label>
               <Textarea rows={5} value={editRaw} onChange={(e) => setEditRaw(e.target.value)} />
             </div>
             <div className="flex gap-3 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>{t("signal.cancel")}</Button>
               <Button size="sm" onClick={saveEdit} disabled={savingEdit}>
-                {savingEdit ? "Saving..." : "Save"}
+                {savingEdit ? t("signal.saving") : t("signal.save")}
               </Button>
             </div>
           </div>
         ) : (
-        <div className="mb-6">
-          {signal.aiSummary && (
-            <div className="p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/20 mb-4">
-              <p className="text-sm text-indigo-300 font-medium mb-1">AI Summary</p>
-              <p className="text-sm text-white/80">{signal.aiSummary}</p>
-            </div>
-          )}
-          <div className="prose prose-invert max-w-none">
+          <div className="mb-6">
+            {signal.aiSummary && (
+              <div className="p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/20 mb-4">
+                <p className="text-sm text-indigo-300 font-medium mb-1">{t("signal.ai_summary_label")}</p>
+                <p className="text-sm text-white/80">{signal.aiSummary}</p>
+              </div>
+            )}
             <p className="text-white/80 leading-relaxed whitespace-pre-wrap text-sm">{signal.rawText}</p>
           </div>
-        </div>
         )}
 
         {/* Scenarios */}
@@ -224,44 +195,42 @@ export default function SignalDetailPage() {
           <div key={scenario.id} className="mb-4 p-3 sm:p-5 rounded-xl border border-white/10 bg-white/3">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">Scenario {i + 1}</span>
-                <Badge
-                  variant={scenario.direction === "LONG" ? "green" : scenario.direction === "SHORT" ? "red" : "yellow"}
-                >
-                  {scenario.direction === "LONG" ? "▲ LONG" : scenario.direction === "SHORT" ? "▼ SHORT" : "— NEUTRAL"}
+                <span className="text-sm font-semibold text-white">{t("signal.scenario_label")} {i + 1}</span>
+                <Badge variant={scenario.direction === "LONG" ? "green" : scenario.direction === "SHORT" ? "red" : "yellow"}>
+                  {dirLabel(scenario.direction)}
                 </Badge>
                 <Badge variant="outline">{scenario.entryType}</Badge>
               </div>
               <span className={cn("text-sm font-bold", confidenceColor(scenario.confidence))}>
-                {scenario.confidence}% confidence
+                {scenario.confidence}% {t("signal.confidence_label")}
               </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
               <div className="p-3 rounded-lg bg-white/5">
-                <p className="text-xs text-white/40 mb-1">Entry Point</p>
+                <p className="text-xs text-white/40 mb-1">{t("signal.entry_point")}</p>
                 <p className="font-mono font-semibold text-white">{scenario.entryPoint.toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-lg bg-white/5">
-                <p className="text-xs text-white/40 mb-1">Stop Loss</p>
+                <p className="text-xs text-white/40 mb-1">{t("signal.stop_loss")}</p>
                 <p className="font-mono font-semibold text-red-400">{scenario.stopLoss.toLocaleString()}</p>
               </div>
               {scenario.takeProfits.map((tp, j) => (
                 <div key={j} className="p-3 rounded-lg bg-white/5">
-                  <p className="text-xs text-white/40 mb-1">TP {j + 1}</p>
+                  <p className="text-xs text-white/40 mb-1">{t("signal.tp")} {j + 1}</p>
                   <p className="font-mono font-semibold text-green-400">{tp.toLocaleString()}</p>
                 </div>
               ))}
             </div>
 
             <div className="mb-3">
-              <p className="text-xs text-white/40 mb-1">Reasoning</p>
+              <p className="text-xs text-white/40 mb-1">{t("signal.reasoning_label")}</p>
               <p className="text-sm text-white/70 leading-relaxed">{scenario.reasoning}</p>
             </div>
 
             {scenario.invalidation && (
               <div>
-                <p className="text-xs text-white/40 mb-1">Invalidation</p>
+                <p className="text-xs text-white/40 mb-1">{t("signal.invalidation_label")}</p>
                 <p className="text-sm text-yellow-400/80">{scenario.invalidation}</p>
               </div>
             )}
@@ -276,12 +245,11 @@ export default function SignalDetailPage() {
           </Button>
           <span className="flex items-center gap-2 text-sm text-white/40">
             <MessageCircle className="w-4 h-4" />
-            {signal._count?.comments ?? 0} comments
+            {signal._count?.comments ?? 0} {t("comment.title").toLowerCase()}
           </span>
         </div>
       </div>
 
-      {/* Comments */}
       <div className="rounded-2xl border border-white/10 bg-white/3 p-4 sm:p-6">
         <CommentSection signalId={id} />
       </div>

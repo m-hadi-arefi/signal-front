@@ -12,12 +12,14 @@ import { ProfileEditModal } from "@/components/profile/ProfileEditModal";
 import { FollowButton } from "@/components/profile/FollowButton";
 import { PasswordChange } from "@/components/profile/PasswordChange";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { formatDate } from "@/lib/utils";
 import { Calendar, BarChart2, Heart, Shield, Pencil, Users } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { user: authUser, refresh } = useAuth();
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [user, setUser] = useState<UserPublic | null>(null);
   const [signals, setSignals] = useState<SignalData[]>([]);
@@ -54,7 +56,7 @@ export default function ProfilePage() {
     </div>
   );
 
-  if (!user) return <div className="text-center py-32 text-white/40">User not found</div>;
+  if (!user) return <div className="text-center py-32 text-white/40">{t("profile.not_found")}</div>;
 
   const isOfficial = user.role === "ADMIN" || user.role === "ANALYST";
   const isOwn = user.isSelf ?? authUser?.id === user.id;
@@ -67,14 +69,10 @@ export default function ProfilePage() {
           initialBio={user.bio}
           initialAvatar={user.avatar}
           onClose={() => setEditing(false)}
-          onSaved={({ bio, avatar }) => {
-            setUser((u) => (u ? { ...u, bio, avatar } : u));
-            refresh();
-          }}
+          onSaved={({ bio, avatar }) => { setUser((u) => (u ? { ...u, bio, avatar } : u)); refresh(); }}
         />
       )}
 
-      {/* Profile header */}
       <div className="rounded-2xl border border-white/10 bg-white/3 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row items-start gap-4">
           <Avatar src={user.avatar} username={user.username} size="xl" />
@@ -85,39 +83,35 @@ export default function ProfilePage() {
                 {isOfficial && (
                   <span className="inline-flex items-center gap-1 text-xs text-indigo-400 bg-indigo-600/20 px-2 py-0.5 rounded-full">
                     <Shield className="w-3 h-3" />
-                    {user.role === "ADMIN" ? "Admin" : "Analyst"}
+                    {user.role === "ADMIN" ? t("profile.admin") : t("profile.analyst")}
                   </span>
                 )}
               </div>
               {isOwn ? (
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-2">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-2 shrink-0">
+                  <Pencil className="w-3.5 h-3.5" /> {t("profile.edit")}
                 </Button>
               ) : authUser ? (
-                <FollowButton
-                  username={user.username}
-                  initialFollowing={user.isFollowing ?? false}
-                  initialFollowers={user._count?.followers ?? 0}
-                />
+                <FollowButton username={user.username} initialFollowing={user.isFollowing ?? false} initialFollowers={user._count?.followers ?? 0} />
               ) : null}
             </div>
             {user.bio && <p className="text-sm text-white/60 mb-3">{user.bio}</p>}
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-white/40">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
-                Joined {formatDate(user.createdAt)}
+                {t("profile.joined")} {formatDate(user.createdAt)}
               </span>
               <span className="flex items-center gap-1.5">
                 <BarChart2 className="w-3.5 h-3.5" />
-                {user._count?.signals ?? 0} signals
+                {user._count?.signals ?? 0} {t("profile.signals")}
               </span>
               <span className="flex items-center gap-1.5">
                 <Heart className="w-3.5 h-3.5" />
-                {user._count?.likes ?? 0} likes
+                {user._count?.likes ?? 0} {t("profile.likes")}
               </span>
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" />
-                {user._count?.followers ?? 0} followers · {user._count?.following ?? 0} following
+                {user._count?.followers ?? 0} {t("profile.followers")} · {user._count?.following ?? 0} {t("profile.following_count")}
               </span>
             </div>
           </div>
@@ -126,14 +120,13 @@ export default function ProfilePage() {
 
       {isOwn && <PasswordChange />}
 
-      {/* Signals */}
-      <h2 className="text-base font-semibold text-white mb-4">Signals</h2>
+      <h2 className="text-base font-semibold text-white mb-4">{t("nav.feed")}</h2>
       <div className="space-y-4">
         {signals.map((signal) => <SignalCard key={signal.id} signal={signal} />)}
-        {signals.length === 0 && <p className="text-center py-16 text-white/30">No signals posted yet</p>}
+        {signals.length === 0 && <p className="text-center py-16 text-white/30">{t("profile.no_signals")}</p>}
         {nextCursor && (
           <button onClick={loadMore} disabled={loadingMore} className="w-full py-3 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
-            {loadingMore ? <Spinner className="mx-auto" /> : "Load more"}
+            {loadingMore ? <Spinner className="mx-auto" /> : t("profile.load_more")}
           </button>
         )}
       </div>

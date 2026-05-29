@@ -5,11 +5,13 @@ import { SignalFeed } from "@/components/signals/SignalFeed";
 import { CreateSignalModal } from "@/components/signals/CreateSignalModal";
 import { FilterBar, FeedFilters, DEFAULT_FILTERS } from "@/components/signals/FilterBar";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function FeedContent() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const params = useSearchParams();
   const router = useRouter();
 
@@ -39,10 +41,10 @@ function FeedContent() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <TrendingUp className="w-5 h-5 text-indigo-400" />
-          <h1 className="text-xl font-bold text-white">Live Feed</h1>
+          <h1 className="text-xl font-bold text-white">{t("feed.title")}</h1>
           <span className="flex items-center gap-1.5 text-xs text-green-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Live
+            {t("feed.live")}
           </span>
         </div>
         {user && <CreateSignalModal />}
@@ -50,16 +52,16 @@ function FeedContent() {
 
       {user && (
         <div className="flex gap-2 mb-4">
-          {(["all", "following"] as const).map((t) => (
+          {(["all", "following"] as const).map((tp) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tp}
+              onClick={() => setTab(tp)}
               className={cn(
-                "px-4 py-1.5 rounded-full text-sm font-medium capitalize transition-colors",
-                tab === t ? "bg-indigo-600/20 text-indigo-400" : "text-white/40 hover:text-white bg-white/5"
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                tab === tp ? "bg-indigo-600/20 text-indigo-400" : "text-white/40 hover:text-white bg-white/5"
               )}
             >
-              {t}
+              {tp === "all" ? t("feed.all") : t("feed.following")}
             </button>
           ))}
         </div>
@@ -67,12 +69,7 @@ function FeedContent() {
 
       <FilterBar filters={filters} onChange={applyFilters} />
 
-      <SignalFeed
-        key={tab}
-        filters={filters}
-        following={tab === "following"}
-        syncUrlCursor
-      />
+      <SignalFeed key={tab} filters={filters} following={tab === "following"} syncUrlCursor />
     </div>
   );
 }
