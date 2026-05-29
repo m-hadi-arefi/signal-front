@@ -22,10 +22,15 @@ export const POST = withLogging(
 
     let following: boolean;
     if (existing) {
-      await prisma.follow.delete({ where: { id: existing.id } });
+      await prisma.follow.delete({ where: { id: existing.id } }).catch(() => {});
       following = false;
     } else {
-      await prisma.follow.create({ data: { followerId: userId, followingId: target.id } });
+      try {
+        await prisma.follow.create({ data: { followerId: userId, followingId: target.id } });
+      } catch (e: any) {
+        if (e?.code !== "P2002") throw e;
+        // concurrent follow — already followed
+      }
       following = true;
       await prisma.notification.create({
         data: { userId: target.id, type: "FOLLOW", payload: { followerId: userId } },

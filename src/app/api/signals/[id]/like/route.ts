@@ -14,11 +14,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   let liked: boolean;
   if (existing) {
-    await prisma.like.delete({ where: { id: existing.id } });
+    await prisma.like.delete({ where: { id: existing.id } }).catch(() => {});
     liked = false;
   } else {
-    await prisma.like.create({ data: { userId, signalId } });
-    liked = true;
+    try {
+      await prisma.like.create({ data: { userId, signalId } });
+      liked = true;
+    } catch (e: any) {
+      // P2002: concurrent like — treat as already liked
+      if (e?.code !== "P2002") throw e;
+      liked = true;
+    }
   }
 
   const count = await prisma.like.count({ where: { signalId } });

@@ -40,12 +40,14 @@ const SELECT_SIGNAL = {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50);
+  const parsedLimit = parseInt(searchParams.get("limit") || "20", 10);
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 50) : 20;
   const symbol = searchParams.get("symbol");
   const official = searchParams.get("official") === "true";
   const direction = searchParams.get("direction");
   const sort = searchParams.get("sort") === "popular" ? "popular" : "latest";
-  const minConfidence = parseInt(searchParams.get("minConfidence") || "0");
+  const parsedConf = parseInt(searchParams.get("minConfidence") || "0", 10);
+  const minConfidence = Number.isFinite(parsedConf) ? Math.max(0, Math.min(100, parsedConf)) : 0;
   const following = searchParams.get("following") === "true";
   const userId = req.headers.get("x-user-id");
 

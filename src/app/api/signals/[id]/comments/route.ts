@@ -78,6 +78,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const signal = await prisma.signal.findUnique({ where: { id: signalId }, select: { id: true, authorId: true } });
   if (!signal) return NextResponse.json({ error: "Signal not found" }, { status: 404 });
 
+  if (parentId) {
+    const parent = await prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { signalId: true, parentId: true, status: true },
+    });
+    if (!parent || parent.signalId !== signalId || parent.status !== "ACTIVE" || parent.parentId !== null) {
+      return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
+    }
+  }
+
   const comment = await prisma.comment.create({
     data: { signalId, authorId: userId, content, parentId },
     select: {

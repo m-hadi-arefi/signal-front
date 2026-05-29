@@ -2,9 +2,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-change-me"
-);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
+const SECRET = new TextEncoder().encode(jwtSecret);
 const COOKIE_NAME = "token";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -27,7 +29,11 @@ export async function signToken(payload: Omit<JWTPayload, "iat" | "exp">): Promi
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as JWTPayload;
+    const { sub, username, role } = payload as Record<string, unknown>;
+    if (typeof sub !== "string" || typeof username !== "string" || typeof role !== "string") {
+      return null;
+    }
+    return { sub, username, role, iat: payload.iat, exp: payload.exp };
   } catch {
     return null;
   }

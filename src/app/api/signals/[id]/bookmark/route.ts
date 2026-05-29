@@ -17,11 +17,16 @@ export const POST = withLogging(
 
     let bookmarked: boolean;
     if (existing) {
-      await prisma.bookmark.delete({ where: { id: existing.id } });
+      await prisma.bookmark.delete({ where: { id: existing.id } }).catch(() => {});
       bookmarked = false;
     } else {
-      await prisma.bookmark.create({ data: { userId, signalId } });
-      bookmarked = true;
+      try {
+        await prisma.bookmark.create({ data: { userId, signalId } });
+        bookmarked = true;
+      } catch (e: any) {
+        if (e?.code !== "P2002") throw e;
+        bookmarked = true;
+      }
     }
 
     return NextResponse.json({ bookmarked });

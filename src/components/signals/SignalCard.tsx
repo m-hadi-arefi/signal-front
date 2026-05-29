@@ -33,6 +33,10 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast.error("Sign in to like signals");
+      return;
+    }
     if (loading) return;
     setLoading(true);
     try {

@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const key = `avatars/${userId}-${Date.now()}.${EXT[file.type]}`;
+  const randomId = crypto.randomUUID();
+  const key = `avatars/${userId}-${randomId}.${EXT[file.type]}`;
 
   try {
     await ensureBucket();
