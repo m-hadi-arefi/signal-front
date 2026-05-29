@@ -4,6 +4,8 @@ import { verifyToken, signToken, createAuthCookie } from "./lib/auth";
 const PUBLIC_PATHS = ["/", "/login", "/register"];
 
 // API routes that don't need auth (read-only public data)
+// These prefixes allow read-only (GET/HEAD) access without authentication.
+// POST/PATCH/DELETE always require a verified token regardless of prefix.
 const PUBLIC_API_PREFIXES = [
   "/api/auth/",
   "/api/mqtt/auth",
@@ -12,6 +14,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/search",
   "/api/users/",
 ];
+
+const READ_ONLY_METHODS = ["GET", "HEAD"];
 
 // Page routes accessible without login
 const PUBLIC_PAGE_PREFIXES = [
@@ -30,7 +34,10 @@ export async function middleware(req: NextRequest) {
   if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {
-    if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) {
+    if (
+      PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p)) &&
+      READ_ONLY_METHODS.includes(req.method)
+    ) {
       return applyHeaders(req, null);
     }
   } else {
@@ -79,6 +86,11 @@ function applyHeaders(
   payload: { sub: string; username: string; role: string } | null
 ): NextResponse {
   const headers = new Headers(req.headers);
+  // Always strip client-supplied identity headers to prevent spoofing,
+  // then re-set them only when we have a verified payload.
+  headers.delete("x-user-id");
+  headers.delete("x-user-username");
+  headers.delete("x-user-role");
   if (payload) {
     headers.set("x-user-id", payload.sub);
     headers.set("x-user-username", payload.username);

@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCache, setCache } from "@/lib/redis";
+import { rateLimit } from "@/lib/rate-limit";
 
 const SEARCH_TTL = 30;
+const MAX_QUERY_LENGTH = 100;
 
 export async function GET(req: NextRequest) {
+  const rl = await rateLimit(req, "search", 30, 60);
+  if (!rl.success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
-  const q = (searchParams.get("q") || "").trim();
+  const q = (searchParams.get("q") || "").trim().slice(0, MAX_QUERY_LENGTH);
   const type = searchParams.get("type") === "users" ? "users" : "signals";
 
-  if (q.length < 1) {
+  if (q.length < 2) {
     return NextResponse.json({ data: [], type });
   }
 
+  // Hash long queries to prevent Redis key exhaustion
   const cacheKey = `search:${type}:${q.toLowerCase()}`;
   const cached = await getCache(cacheKey);
   if (cached) return NextResponse.json({ data: cached, type });

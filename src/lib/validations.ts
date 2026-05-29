@@ -50,7 +50,11 @@ export const commentSchema = z.object({
 
 export const profileUpdateSchema = z.object({
   bio: z.string().max(500).optional(),
-  avatar: z.string().url().optional(),
+  avatar: z
+    .string()
+    .url()
+    .refine((url) => /^https?:\/\//i.test(url), "Avatar must be an http/https URL")
+    .optional(),
 });
 
 export const changePasswordSchema = z.object({
