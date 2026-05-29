@@ -74,15 +74,15 @@ export function ProfileEditModal({ username, initialBio, initialAvatar, onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d0d14] shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d0d14] shadow-2xl mx-2 sm:mx-0">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">Edit Profile</h2>
           <button onClick={onClose} className="text-white/40 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 space-y-5">
-          <div className="flex items-center gap-4">
+        <div className="p-4 sm:p-6 space-y-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <Avatar src={avatar} username={username} size="xl" />
             <div>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />

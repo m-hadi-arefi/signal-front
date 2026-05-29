@@ -93,7 +93,7 @@ export function SearchBar({ className, onNavigate }: { className?: string; onNav
       </form>
 
       {open && q.trim().length > 0 && (
-        <div className="absolute mt-2 w-full rounded-xl border border-white/10 bg-[#0d0d14] shadow-2xl z-50 overflow-hidden">
+        <div className="absolute mt-2 left-0 right-0 rounded-xl border border-white/10 bg-[#0d0d14] shadow-2xl z-50 overflow-hidden min-w-[240px]">
           <div className="flex border-b border-white/10">
             {(["signals", "users"] as const).map((t) => (
               <button
@@ -129,7 +129,7 @@ export function SearchBar({ className, onNavigate }: { className?: string; onNav
                   <Badge variant="outline" className="font-mono text-xs shrink-0">
                     {s.symbol}
                   </Badge>
-                  <span className="text-sm text-white/70 truncate">{s.aiSummary || s.rawText}</span>
+                  <span className="text-sm text-white/70 truncate min-w-0 flex-1">{s.aiSummary || s.rawText}</span>
                 </Link>
               ))}
             {!loading &&

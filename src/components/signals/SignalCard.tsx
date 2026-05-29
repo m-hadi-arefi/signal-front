@@ -84,7 +84,7 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
 
   return (
     <Link href={`/signals/${signal.id}`} className="block group">
-      <div className="rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-5 hover:border-indigo-500/40 hover:bg-white/8 transition-all duration-200">
+      <div className="rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-3 sm:p-5 hover:border-indigo-500/40 hover:bg-white/8 transition-all duration-200">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
             <Link href={`/profile/${signal.author.username}`} onClick={(e) => e.stopPropagation()}>
@@ -142,7 +142,7 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
         </p>
 
         {scenario && (
-          <div className="grid grid-cols-3 gap-3 mb-4 p-3 rounded-lg bg-white/5 border border-white/5">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 p-2 sm:p-3 rounded-lg bg-white/5 border border-white/5">
             <div>
               <p className="text-xs text-white/40 mb-1">Entry</p>
               <p className="text-sm font-mono font-semibold text-white">{scenario.entryPoint.toLocaleString()}</p>
