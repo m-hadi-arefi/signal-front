@@ -14,6 +14,30 @@ body {
   color: var(--foreground);
 }
 
+/* Persian font */
+[lang="fa"] body,
+[dir="rtl"] body {
+  font-family: var(--font-vazirmatn), Tahoma, sans-serif;
+}
+
+/* RTL directional fixes */
+[dir="rtl"] .input-icon-start {
+  right: 0.75rem;
+  left: auto;
+}
+
+[dir="rtl"] .input-with-icon {
+  padding-right: 2.25rem;
+  padding-left: 0.75rem;
+}
+
+[dir="rtl"] .dropdown-end {
+  left: 0;
+  right: auto;
+}
+
+/* Tailwind rtl: variant support — already handled by dir attr on html */
+
 ::-webkit-scrollbar {
   width: 6px;
 }

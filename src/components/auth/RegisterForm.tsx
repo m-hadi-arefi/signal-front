@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api-client";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export function RegisterForm() {
   const router = useRouter();
   const { refresh } = useAuth();
   const toast = useToast();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ email: "", username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export function RegisterForm() {
       await refresh();
       router.push("/feed");
     } catch {
-      setError("Network error");
+      setError(t("auth.network_error"));
     } finally {
       setLoading(false);
     }
@@ -44,24 +46,24 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-xs text-white/50 mb-1.5">Email</label>
-        <Input type="email" placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <label className="block text-xs text-white/50 mb-1.5">{t("auth.email")}</label>
+        <Input type="email" placeholder={t("auth.email_ph")} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
       </div>
       <div>
-        <label className="block text-xs text-white/50 mb-1.5">Username</label>
-        <Input placeholder="crypto_trader" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+        <label className="block text-xs text-white/50 mb-1.5">{t("auth.username")}</label>
+        <Input placeholder={t("auth.username_ph")} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
       </div>
       <div>
-        <label className="block text-xs text-white/50 mb-1.5">Password</label>
-        <Input type="password" placeholder="Min 8 chars, 1 uppercase, 1 number" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+        <label className="block text-xs text-white/50 mb-1.5">{t("auth.password")}</label>
+        <Input type="password" placeholder={t("auth.password_ph")} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? "Creating account..." : "Create Account"}
+        {loading ? t("auth.creating") : t("auth.create_btn")}
       </Button>
       <p className="text-sm text-center text-white/40">
-        Already have an account?{" "}
-        <Link href="/login" className="text-indigo-400 hover:underline">Login</Link>
+        {t("auth.have_account")}{" "}
+        <Link href="/login" className="text-indigo-400 hover:underline">{t("auth.login_link")}</Link>
       </p>
     </form>
   );

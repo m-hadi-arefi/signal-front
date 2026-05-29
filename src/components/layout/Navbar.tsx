@@ -8,17 +8,20 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, Zap, LogOut, Menu, X, Bookmark } from "lucide-react";
 import { useState } from "react";
 import { SearchBar } from "./SearchBar";
-
-const NAV_LINKS = [
-  { href: "/feed", label: "Feed", icon: TrendingUp },
-  { href: "/official", label: "Official Signals", icon: Zap },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
-];
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export function Navbar() {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useLanguage();
+
+  const NAV_LINKS = [
+    { href: "/feed", label: t("nav.feed"), icon: TrendingUp },
+    { href: "/official", label: t("nav.official"), icon: Zap },
+    { href: "/bookmarks", label: t("nav.bookmarks"), icon: Bookmark },
+  ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur-xl">
@@ -27,7 +30,7 @@ export function Navbar() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <Zap className="w-4 h-4 text-white" />
           </div>
-          <span className="hidden xs:block sm:block">Signal<span className="text-indigo-400">Pro</span></span>
+          <span className="hidden sm:block">Signal<span className="text-indigo-400">Pro</span></span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
@@ -51,19 +54,20 @@ export function Navbar() {
         <SearchBar className="hidden md:block flex-1 max-w-xs" />
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher className="hidden sm:flex" />
           {!loading && user ? (
             <>
               <Link href={`/profile/${user.username}`}>
                 <Avatar src={user.avatar} username={user.username} size="sm" />
               </Link>
-              <Button variant="ghost" size="icon" onClick={logout} className="hidden md:flex" title="Logout">
+              <Button variant="ghost" size="icon" onClick={logout} className="hidden md:flex" title={t("nav.logout")}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </>
           ) : !loading ? (
             <div className="flex items-center gap-2">
-              <Link href="/login"><Button variant="ghost" size="sm">Login</Button></Link>
-              <Link href="/register"><Button size="sm">Sign Up</Button></Link>
+              <Link href="/login"><Button variant="ghost" size="sm">{t("nav.login")}</Button></Link>
+              <Link href="/register"><Button size="sm">{t("nav.signup")}</Button></Link>
             </div>
           ) : null}
 
@@ -93,11 +97,14 @@ export function Navbar() {
               {label}
             </Link>
           ))}
-          {user && (
-            <button onClick={logout} className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 w-full">
-              <LogOut className="w-4 h-4" /> Logout
-            </button>
-          )}
+          <div className="flex items-center justify-between px-3 py-2">
+            <LanguageSwitcher />
+            {user && (
+              <button onClick={logout} className="flex items-center gap-2 text-sm text-red-400">
+                <LogOut className="w-4 h-4" /> {t("nav.logout")}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </header>

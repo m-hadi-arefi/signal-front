@@ -1,35 +1,27 @@
-import type { Metadata } from "next";
+"use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Zap, TrendingUp, Shield, Users, BarChart2, ChevronRight } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "SignalPro — Real-Time Crypto Signal Community",
-  description:
-    "Professional crypto signal analysis platform. Real-time feed, expert scenarios, TP/SL targets, and a community of serious traders.",
-  keywords: ["crypto signals", "trading", "bitcoin", "technical analysis", "crypto community"],
-  openGraph: {
-    title: "SignalPro — Real-Time Crypto Signal Community",
-    description: "Real-time crypto signals, expert scenarios, and a community of serious traders.",
-    type: "website",
-  },
-};
-
-const FEATURES = [
-  { icon: TrendingUp, title: "Real-Time Signals", desc: "Live crypto signals pushed instantly via MQTT — no refresh needed." },
-  { icon: Shield, title: "Official Analysis", desc: "Verified signals from our expert analysts, clearly marked and trusted." },
-  { icon: Users, title: "Community Feed", desc: "Share your analysis, like, comment, and discuss with other traders." },
-  { icon: BarChart2, title: "Detailed Scenarios", desc: "Every signal includes entry, TP targets, stop loss, and confidence score." },
-];
-
-const FAQS = [
-  { q: "Is SignalPro free?", a: "Yes, creating an account and viewing signals is completely free." },
-  { q: "Who can post signals?", a: "Any registered user can post signals. Official signals come from our verified analysts." },
-  { q: "How is real-time implemented?", a: "We use EMQX MQTT broker over WebSocket. All updates are instant, no polling." },
-  { q: "Is my data secure?", a: "Yes. We use bcrypt for passwords, httpOnly JWT cookies, and rate limiting on all endpoints." },
-];
+import { useLanguage } from "@/components/providers/LanguageProvider";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 
 export default function LandingPage() {
+  const { t } = useLanguage();
+
+  const FEATURES = [
+    { icon: TrendingUp, title: t("landing.feature_realtime_title"), desc: t("landing.feature_realtime_desc") },
+    { icon: Shield, title: t("landing.feature_official_title"), desc: t("landing.feature_official_desc") },
+    { icon: Users, title: t("landing.feature_community_title"), desc: t("landing.feature_community_desc") },
+    { icon: BarChart2, title: t("landing.feature_scenarios_title"), desc: t("landing.feature_scenarios_desc") },
+  ];
+
+  const FAQS = [
+    { q: t("landing.faq_1_q"), a: t("landing.faq_1_a") },
+    { q: t("landing.faq_2_q"), a: t("landing.faq_2_a") },
+    { q: t("landing.faq_3_q"), a: t("landing.faq_3_a") },
+    { q: t("landing.faq_4_q"), a: t("landing.faq_4_a") },
+  ];
+
   return (
     <div className="min-h-screen bg-[#08080f]">
       {/* Header */}
@@ -42,8 +34,9 @@ export default function LandingPage() {
             Signal<span className="text-indigo-400">Pro</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/login"><Button variant="ghost" size="sm">Login</Button></Link>
-            <Link href="/register"><Button size="sm">Get Started</Button></Link>
+            <LanguageSwitcher />
+            <Link href="/login"><Button variant="ghost" size="sm">{t("nav.login")}</Button></Link>
+            <Link href="/register"><Button size="sm">{t("landing.join_free")}</Button></Link>
           </div>
         </div>
       </header>
@@ -56,36 +49,35 @@ export default function LandingPage() {
         <div className="relative max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 sm:px-4 py-1.5 text-xs text-indigo-400 mb-6 sm:mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Live — Real-time crypto signals via MQTT
+            {t("landing.live_badge")}
           </div>
 
           <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white mb-4 sm:mb-6 leading-tight">
-            Trade Smarter with<br />
+            {t("landing.hero_title_1")}<br />
             <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Community Intelligence
+              {t("landing.hero_title_2")}
             </span>
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed px-2">
-            Professional crypto signal analysis platform. Real-time feed, expert scenarios,
-            TP/SL targets, and a community of serious traders — all in one place.
+            {t("landing.hero_sub")}
           </p>
 
           <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
             <Link href="/register">
               <Button size="lg" className="gap-2 text-sm sm:text-base px-6 sm:px-8">
-                Join Free <ChevronRight className="w-4 h-4" />
+                {t("landing.join_free")} <ChevronRight className="w-4 h-4 rtl:rotate-180" />
               </Button>
             </Link>
             <Link href="/feed">
               <Button variant="outline" size="lg" className="text-sm sm:text-base px-6 sm:px-8">
-                View Live Feed
+                {t("landing.view_feed")}
               </Button>
             </Link>
           </div>
 
           <div className="mt-12 sm:mt-16 grid grid-cols-3 gap-4 sm:gap-8 max-w-xs sm:max-w-sm mx-auto text-center">
-            {[["1000+", "Signals"], ["100+", "Traders"], ["Real-time", "Updates"]].map(([val, label]) => (
+            {[["1000+", t("landing.stat_signals")], ["100+", t("landing.stat_traders")], [t("landing.stat_realtime"), t("landing.stat_updates")]].map(([val, label]) => (
               <div key={label}>
                 <p className="text-xl sm:text-2xl font-bold text-white">{val}</p>
                 <p className="text-xs text-white/40">{label}</p>
@@ -98,10 +90,8 @@ export default function LandingPage() {
       {/* Features */}
       <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-3 sm:mb-4">Everything you need</h2>
-          <p className="text-center text-white/50 mb-10 sm:mb-16 max-w-xl mx-auto text-sm sm:text-base">
-            Built for serious crypto traders who demand real-time data, structured analysis, and community insights.
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-3 sm:mb-4">{t("landing.everything_title")}</h2>
+          <p className="text-center text-white/50 mb-10 sm:mb-16 max-w-xl mx-auto text-sm sm:text-base">{t("landing.everything_sub")}</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="p-5 sm:p-6 rounded-2xl border border-white/10 bg-white/3 hover:border-indigo-500/30 hover:bg-white/5 transition-all">
@@ -119,12 +109,12 @@ export default function LandingPage() {
       {/* How it works */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-10 sm:mb-16">How it works</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-10 sm:mb-16">{t("landing.how_it_works")}</h2>
           <div className="grid sm:grid-cols-3 gap-6 sm:gap-8">
             {[
-              { step: "1", title: "Sign Up", desc: "Create your free account in seconds. No credit card required." },
-              { step: "2", title: "Browse Signals", desc: "Follow the live feed, filter by symbol, or check official signals from our analysts." },
-              { step: "3", title: "Trade & Discuss", desc: "Use signals in your trades, post your own analysis, engage with the community." },
+              { step: "1", title: t("landing.step1_title"), desc: t("landing.step1_desc") },
+              { step: "2", title: t("landing.step2_title"), desc: t("landing.step2_desc") },
+              { step: "3", title: t("landing.step3_title"), desc: t("landing.step3_desc") },
             ].map(({ step, title, desc }) => (
               <div key={step} className="text-center">
                 <div className="w-12 h-12 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-lg mx-auto mb-4">
@@ -141,7 +131,7 @@ export default function LandingPage() {
       {/* FAQ */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-8 sm:mb-12">FAQ</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-8 sm:mb-12">{t("landing.faq_title")}</h2>
           <div className="space-y-4">
             {FAQS.map(({ q, a }) => (
               <div key={q} className="p-4 sm:p-5 rounded-xl border border-white/10 bg-white/3">
@@ -156,11 +146,11 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to trade smarter?</h2>
-          <p className="text-white/50 mb-8 text-sm sm:text-base">Join thousands of crypto traders on SignalPro today.</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">{t("landing.cta_title")}</h2>
+          <p className="text-white/50 mb-8 text-sm sm:text-base">{t("landing.cta_sub")}</p>
           <Link href="/register">
             <Button size="lg" className="text-sm sm:text-base px-8 sm:px-10 gap-2">
-              Create Free Account <ChevronRight className="w-4 h-4" />
+              {t("landing.cta_btn")} <ChevronRight className="w-4 h-4 rtl:rotate-180" />
             </Button>
           </Link>
         </div>
@@ -173,7 +163,7 @@ export default function LandingPage() {
             <Zap className="w-4 h-4 text-indigo-400" />
             <span>SignalPro</span>
           </div>
-          <p>© {new Date().getFullYear()} SignalPro. Built for traders.</p>
+          <p>© {new Date().getFullYear()} SignalPro. {t("landing.footer_copy")}</p>
         </div>
       </footer>
     </div>

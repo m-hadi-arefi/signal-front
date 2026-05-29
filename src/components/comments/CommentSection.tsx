@@ -11,48 +11,37 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api-client";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
-interface CommentSectionProps {
-  signalId: string;
-}
+interface CommentSectionProps { signalId: string; }
 
-function CommentItem({
-  comment,
-  onReply,
-  onDelete,
-}: {
+function CommentItem({ comment, onReply, onDelete }: {
   comment: CommentData;
   onReply: (id: string, username: string) => void;
   onDelete: (id: string) => void;
 }) {
   const { user } = useAuth();
   const toast = useToast();
+  const { t } = useLanguage();
   const [liked, setLiked] = useState(comment.isLiked ?? false);
   const [likeCount, setLikeCount] = useState(comment._count?.likes ?? 0);
   const [showReplies, setShowReplies] = useState(false);
-
   const canDelete = !!user && (user.id === comment.author.id || user.role === "ADMIN");
 
   const handleLike = async () => {
-    if (!user) return;
+    if (!user) { toast.error(t("comment.sign_in_to_like")); return; }
     const res = await apiFetch(`/api/comments/${comment.id}/like`, { method: "POST" });
-    if (res.ok) {
-      const { liked: l, count } = await res.json();
-      setLiked(l);
-      setLikeCount(count);
-    }
+    if (res.ok) { const { liked: l, count } = await res.json(); setLiked(l); setLikeCount(count); }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this comment?")) return;
+    if (!confirm(t("comment.delete_confirm"))) return;
     const res = await apiFetch(`/api/comments/${comment.id}`, { method: "DELETE" });
-    if (res.ok) {
-      onDelete(comment.id);
-      toast.success("Comment deleted");
-    } else {
-      toast.error("Failed to delete");
-    }
+    if (res.ok) { onDelete(comment.id); toast.success(t("comment.deleted")); }
+    else toast.error("Failed to delete");
   };
+
+  const replyCount = comment.replies?.length ?? 0;
 
   return (
     <div className="group">
@@ -71,27 +60,27 @@ function CommentItem({
             </button>
             {user && (
               <button onClick={() => onReply(comment.id, comment.author.username)} className="text-xs text-white/40 hover:text-indigo-400 transition-colors flex items-center gap-1">
-                <Reply className="w-3.5 h-3.5" /> Reply
+                <Reply className="w-3.5 h-3.5" /> {t("comment.reply")}
               </button>
             )}
             {canDelete && (
               <button onClick={handleDelete} className="text-xs text-white/40 hover:text-red-400 transition-colors flex items-center gap-1">
-                <Trash2 className="w-3.5 h-3.5" /> Delete
+                <Trash2 className="w-3.5 h-3.5" /> {t("comment.delete")}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {comment.replies && comment.replies.length > 0 && (
-        <div className="ml-6 sm:ml-10 mt-3">
+      {replyCount > 0 && (
+        <div className="ms-6 sm:ms-10 mt-3">
           <button onClick={() => setShowReplies(!showReplies)} className="text-xs text-indigo-400 flex items-center gap-1 mb-2">
             {showReplies ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {comment.replies.length} {comment.replies.length === 1 ? "reply" : "replies"}
+            {replyCount} {replyCount === 1 ? t("comment.show_replies") : t("comment.show_replies_pl")}
           </button>
           {showReplies && (
-            <div className="space-y-3 border-l border-white/10 pl-3">
-              {comment.replies.map((reply) => (
+            <div className="space-y-3 border-s border-white/10 ps-3">
+              {comment.replies!.map((reply) => (
                 <CommentItem key={reply.id} comment={reply} onReply={onReply} onDelete={onDelete} />
               ))}
             </div>
@@ -105,6 +94,7 @@ function CommentItem({
 export function CommentSection({ signalId }: CommentSectionProps) {
   const { user } = useAuth();
   const toast = useToast();
+  const { t } = useLanguage();
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -112,19 +102,12 @@ export function CommentSection({ signalId }: CommentSectionProps) {
   const [replyTo, setReplyTo] = useState<{ id: string; username: string } | null>(null);
 
   const removeComment = useCallback((id: string) => {
-    setComments((prev) =>
-      prev
-        .filter((c) => c.id !== id)
-        .map((c) => ({ ...c, replies: (c.replies || []).filter((r) => r.id !== id) }))
-    );
+    setComments((prev) => prev.filter((c) => c.id !== id).map((c) => ({ ...c, replies: (c.replies || []).filter((r) => r.id !== id) })));
   }, []);
 
   const fetchComments = useCallback(async () => {
     const res = await apiFetch(`/api/signals/${signalId}/comments`);
-    if (res.ok) {
-      const { data } = await res.json();
-      setComments(data);
-    }
+    if (res.ok) { const { data } = await res.json(); setComments(data); }
     setLoading(false);
   }, [signalId]);
 
@@ -132,25 +115,13 @@ export function CommentSection({ signalId }: CommentSectionProps) {
 
   useMqtt([`comments/${signalId}`], (_, payload: unknown) => {
     const event = payload as { type: string; payload: CommentData & { commentId?: string } };
-    if (event.type === "COMMENT_DELETED") {
-      removeComment(event.payload.commentId!);
-      return;
-    }
+    if (event.type === "COMMENT_DELETED") { removeComment(event.payload.commentId!); return; }
     if (event.type === "NEW_COMMENT") {
       const newComment = event.payload;
       if (newComment.parentId) {
-        setComments((prev) =>
-          prev.map((c) =>
-            c.id === newComment.parentId
-              ? { ...c, replies: [...(c.replies || []), newComment] }
-              : c
-          )
-        );
+        setComments((prev) => prev.map((c) => c.id === newComment.parentId ? { ...c, replies: [...(c.replies || []), newComment] } : c));
       } else {
-        setComments((prev) => {
-          if (prev.find((c) => c.id === newComment.id)) return prev;
-          return [...prev, newComment];
-        });
+        setComments((prev) => { if (prev.find((c) => c.id === newComment.id)) return prev; return [...prev, newComment]; });
       }
     }
   });
@@ -166,40 +137,37 @@ export function CommentSection({ signalId }: CommentSectionProps) {
         body: JSON.stringify({ content: content.trim(), parentId: replyTo?.id }),
       });
       if (res.ok) {
-        setContent("");
-        setReplyTo(null);
-        toast.success("Comment posted");
+        setContent(""); setReplyTo(null);
+        toast.success(t("comment.posted"));
       } else {
-        const { error } = await res.json().catch(() => ({ error: "Failed to post comment" }));
+        const { error } = await res.json().catch(() => ({ error: "Failed" }));
         toast.error(error || "Failed to post comment");
       }
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   return (
     <div className="space-y-6">
-      <h3 className="text-base font-semibold text-white">Comments ({comments.length})</h3>
+      <h3 className="text-base font-semibold text-white">{t("comment.title")} ({comments.length})</h3>
 
       {user && (
         <form onSubmit={handleSubmit} className="space-y-3">
           {replyTo && (
             <div className="flex items-center gap-2 text-xs text-indigo-400">
               <Reply className="w-3.5 h-3.5" />
-              Replying to @{replyTo.username}
+              {t("comment.replying_to").replace("{username}", replyTo.username)}
               <button type="button" onClick={() => setReplyTo(null)} className="text-white/40 hover:text-white">✕</button>
             </div>
           )}
           <Textarea
-            placeholder={replyTo ? `Reply to @${replyTo.username}...` : "Write a comment..."}
+            placeholder={replyTo ? t("comment.reply_ph").replace("{username}", replyTo.username) : t("comment.write_ph")}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={3}
           />
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={submitting || !content.trim()}>
-              {submitting ? <Spinner className="w-4 h-4" /> : "Post"}
+              {submitting ? <Spinner className="w-4 h-4" /> : t("comment.post")}
             </Button>
           </div>
         </form>
@@ -210,16 +178,9 @@ export function CommentSection({ signalId }: CommentSectionProps) {
       ) : (
         <div className="space-y-5">
           {comments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              onReply={(id, username) => setReplyTo({ id, username })}
-              onDelete={removeComment}
-            />
+            <CommentItem key={comment.id} comment={comment} onReply={(id, username) => setReplyTo({ id, username })} onDelete={removeComment} />
           ))}
-          {comments.length === 0 && (
-            <p className="text-center text-sm text-white/30 py-8">No comments yet. Be the first!</p>
-          )}
+          {comments.length === 0 && <p className="text-center text-sm text-white/30 py-8">{t("comment.empty")}</p>}
         </div>
       )}
     </div>
