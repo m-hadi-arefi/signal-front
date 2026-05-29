@@ -41,8 +41,15 @@ services:
       EMQX_DASHBOARD__DEFAULT_PASSWORD: admin123
       EMQX_LISTENER__WS__DEFAULT: 8083
       EMQX_LISTENER__TCP__DEFAULT: 1883
-      EMQX_AUTH__HTTP__ENABLE: "true"
-      EMQX_ALLOW_ANONYMOUS: "true"
+      # Anonymous access disabled — clients authenticate via the Next.js HTTP hook.
+      EMQX_AUTHENTICATION__1__MECHANISM: password_based
+      EMQX_AUTHENTICATION__1__BACKEND: http
+      EMQX_AUTHENTICATION__1__METHOD: post
+      EMQX_AUTHENTICATION__1__URL: "http://nextjs:3000/api/mqtt/auth"
+      EMQX_AUTHENTICATION__1__HEADERS__CONTENT_TYPE: application/json
+      EMQX_AUTHENTICATION__1__BODY__USERNAME: "${username}"
+      EMQX_AUTHENTICATION__1__BODY__PASSWORD: "${password}"
+      EMQX_AUTHENTICATION__1__BODY__CLIENTID: "${clientid}"
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
@@ -69,10 +76,16 @@ services:
       EMQX_API_URL: http://emqx:18083/api/v5
       EMQX_WS_URL: ws://emqx:8083/mqtt
       EMQX_MQTT_USERNAME: ${EMQX_MQTT_USERNAME:-server}
-      EMQX_MQTT_PASSWORD: ${EMQX_MQTT_PASSWORD:-server-password}
+      EMQX_MQTT_PASSWORD: ${EMQX_MQTT_PASSWORD:-server-mqtt-password}
       NEXT_PUBLIC_EMQX_WS_URL: ${NEXT_PUBLIC_EMQX_WS_URL:-ws://localhost:8083/mqtt}
       NEXT_PUBLIC_MQTT_USERNAME: ${NEXT_PUBLIC_MQTT_USERNAME:-client}
-      NEXT_PUBLIC_MQTT_PASSWORD: ${NEXT_PUBLIC_MQTT_PASSWORD:-client-password}
+      NEXT_PUBLIC_MQTT_PASSWORD: ${NEXT_PUBLIC_MQTT_PASSWORD:-client-mqtt-password}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-uploads}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:
@@ -82,11 +95,32 @@ services:
         condition: service_healthy
       emqx:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     command: >
       sh -c "npx prisma migrate deploy && node server.js"
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
   redis_data:
   emqx_data:
   emqx_log:
+  minio_data:

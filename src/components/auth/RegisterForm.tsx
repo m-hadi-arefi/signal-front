@@ -5,10 +5,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/ui/toast";
+import { apiFetch } from "@/lib/api-client";
 
 export function RegisterForm() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const toast = useToast();
   const [form, setForm] = useState({ email: "", username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,13 +21,17 @@ export function RegisterForm() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Registration failed"); return; }
+      if (!res.ok) {
+        setError(data.error || "Registration failed");
+        if (res.status !== 429) toast.error(data.error || "Registration failed");
+        return;
+      }
       await refresh();
       router.push("/feed");
     } catch {

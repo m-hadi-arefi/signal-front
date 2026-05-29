@@ -1,6 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Zap, TrendingUp, Shield, Users, BarChart2, ChevronRight, Check } from "lucide-react";
+import { Zap, TrendingUp, Shield, Users, BarChart2, ChevronRight } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "SignalPro — Real-Time Crypto Signal Community",
+  description:
+    "Professional crypto signal analysis platform. Real-time feed, expert scenarios, TP/SL targets, and a community of serious traders.",
+  keywords: ["crypto signals", "trading", "bitcoin", "technical analysis", "crypto community"],
+  openGraph: {
+    title: "SignalPro — Real-Time Crypto Signal Community",
+    description: "Real-time crypto signals, expert scenarios, and a community of serious traders.",
+    type: "website",
+  },
+};
 
 const FEATURES = [
   { icon: TrendingUp, title: "Real-Time Signals", desc: "Live crypto signals pushed instantly via MQTT — no refresh needed." },

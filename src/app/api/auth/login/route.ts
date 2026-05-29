@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken, createAuthCookie } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   const rl = await rateLimit(req, "login", 10, 60);
@@ -18,9 +19,11 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      logger.warn("auth_login_failed", { email });
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
+    logger.info("auth_login", { userId: user.id, username: user.username });
     const token = await signToken({ sub: user.id, username: user.username, role: user.role });
     const res = NextResponse.json({
       success: true,

@@ -5,10 +5,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/ui/toast";
+import { apiFetch } from "@/lib/api-client";
 
 export function LoginForm() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const toast = useToast();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,13 +21,17 @@ export function LoginForm() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Login failed"); return; }
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        if (res.status !== 429) toast.error(data.error || "Login failed");
+        return;
+      }
       await refresh();
       router.push("/feed");
     } catch {

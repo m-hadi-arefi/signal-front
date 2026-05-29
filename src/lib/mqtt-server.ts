@@ -1,4 +1,5 @@
 import mqtt from "mqtt";
+import { logger } from "./logger";
 
 let serverClient: mqtt.MqttClient | null = null;
 
@@ -29,8 +30,9 @@ export async function publishMqttEvent(topic: string, payload: unknown): Promise
         else resolve();
       });
     });
+    logger.info("mqtt_publish", { topic, bytes: message.length });
   } catch (err) {
-    console.error("[MQTT] Publish error:", err);
+    logger.error("mqtt_publish_error", { topic, error: err instanceof Error ? err.message : String(err) });
   }
 }
 

@@ -52,3 +52,17 @@ export const profileUpdateSchema = z.object({
   bio: z.string().max(500).optional(),
   avatar: z.string().url().optional(),
 });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password required"),
+  newPassword: z
+    .string()
+    .min(8, "Min 8 chars")
+    .regex(/[A-Z]/, "Need uppercase")
+    .regex(/[0-9]/, "Need number"),
+});
+
+export const signalUpdateSchema = z.object({
+  rawText: z.string().min(10).max(5000).optional(),
+  aiSummary: z.string().max(1000).optional(),
+});

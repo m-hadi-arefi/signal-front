@@ -1,11 +1,38 @@
 "use client";
+import { Suspense, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { SignalFeed } from "@/components/signals/SignalFeed";
 import { CreateSignalModal } from "@/components/signals/CreateSignalModal";
+import { FilterBar, FeedFilters, DEFAULT_FILTERS } from "@/components/signals/FilterBar";
 import { useAuth } from "@/hooks/useAuth";
 import { TrendingUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export default function FeedPage() {
+function FeedContent() {
   const { user } = useAuth();
+  const params = useSearchParams();
+  const router = useRouter();
+
+  const [filters, setFilters] = useState<FeedFilters>({
+    symbol: params.get("symbol") || "",
+    direction: params.get("direction") || "",
+    sort: params.get("sort") === "popular" ? "popular" : "latest",
+    minConfidence: parseInt(params.get("minConfidence") || "0") || 0,
+  });
+  const [tab, setTab] = useState<"all" | "following">("all");
+
+  const applyFilters = useCallback(
+    (f: FeedFilters) => {
+      setFilters(f);
+      const sp = new URLSearchParams();
+      if (f.symbol) sp.set("symbol", f.symbol);
+      if (f.direction) sp.set("direction", f.direction);
+      if (f.sort !== "latest") sp.set("sort", f.sort);
+      if (f.minConfidence) sp.set("minConfidence", String(f.minConfidence));
+      router.replace(`/feed${sp.toString() ? `?${sp}` : ""}`);
+    },
+    [router]
+  );
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -20,7 +47,40 @@ export default function FeedPage() {
         </div>
         {user && <CreateSignalModal />}
       </div>
-      <SignalFeed />
+
+      {user && (
+        <div className="flex gap-2 mb-4">
+          {(["all", "following"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-medium capitalize transition-colors",
+                tab === t ? "bg-indigo-600/20 text-indigo-400" : "text-white/40 hover:text-white bg-white/5"
+              )}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <FilterBar filters={filters} onChange={applyFilters} />
+
+      <SignalFeed
+        key={tab}
+        filters={filters}
+        following={tab === "following"}
+        syncUrlCursor
+      />
     </div>
+  );
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense fallback={null}>
+      <FeedContent />
+    </Suspense>
   );
 }
