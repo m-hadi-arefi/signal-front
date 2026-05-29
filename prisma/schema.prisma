@@ -57,10 +57,39 @@ model User {
   comments      Comment[]
   likes         Like[]
   notifications Notification[]
+  bookmarks     Bookmark[]
+  following     Follow[]       @relation("Follower")
+  followers     Follow[]       @relation("Following")
 
   @@index([email])
   @@index([username])
   @@index([role])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signalId  String
+  signal    Signal   @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, signalId])
+  @@index([userId])
+  @@index([signalId])
 }
 
 model Signal {
@@ -81,6 +110,7 @@ model Signal {
   scenarios Scenario[]
   comments  Comment[]
   likes     Like[]
+  bookmarks Bookmark[]
 
   @@index([authorId])
   @@index([symbol])
