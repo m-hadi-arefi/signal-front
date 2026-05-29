@@ -54,6 +54,7 @@ export default function SignalDetailPage() {
   });
 
   const handleLike = async () => {
+    if (!user) { toast.error("Sign in to like signals"); return; }
     if (likeLoading) return;
     setLikeLoading(true);
     const res = await apiFetch(`/api/signals/${id}/like`, { method: "POST" });
@@ -61,6 +62,9 @@ export default function SignalDetailPage() {
       const { liked: l, count } = await res.json();
       setLiked(l);
       setLikeCount(count);
+      toast.success(l ? "Liked!" : "Like removed");
+    } else {
+      toast.error("Failed to like");
     }
     setLikeLoading(false);
   };

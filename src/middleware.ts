@@ -1,20 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, signToken, createAuthCookie } from "./lib/auth";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth/login", "/api/auth/register"];
-const PUBLIC_PREFIXES = ["/api/auth/", "/api/mqtt/auth", "/api/health"];
+const PUBLIC_PATHS = ["/", "/login", "/register"];
 
-// Re-issue the cookie when the token has less than 48h of life remaining.
+// API routes that don't need auth (read-only public data)
+const PUBLIC_API_PREFIXES = [
+  "/api/auth/",
+  "/api/mqtt/auth",
+  "/api/health",
+  "/api/signals",
+  "/api/search",
+  "/api/users/",
+];
+
+// Page routes accessible without login
+const PUBLIC_PAGE_PREFIXES = [
+  "/feed",
+  "/official",
+  "/signals/",
+  "/profile/",
+  "/search",
+];
+
 const REFRESH_THRESHOLD_SECONDS = 48 * 60 * 60;
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (
-    PUBLIC_PATHS.some((p) => pathname === p) ||
-    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
-  ) {
-    return NextResponse.next();
+  if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
+
+  if (pathname.startsWith("/api/")) {
+    if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) {
+      return applyHeaders(req, null);
+    }
+  } else {
+    if (PUBLIC_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) {
+      return applyHeaders(req, null);
+    }
   }
 
   const token = req.cookies.get("token")?.value;
@@ -34,14 +56,9 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  const headers = new Headers(req.headers);
-  headers.set("x-user-id", payload.sub);
-  headers.set("x-user-username", payload.username);
-  headers.set("x-user-role", payload.role);
+  const res = applyHeaders(req, payload);
 
-  const res = NextResponse.next({ request: { headers } });
-
-  // Session extension: if the token is close to expiry, mint a fresh one.
+  // Session extension: re-issue cookie if expiring within 48h
   if (payload.exp) {
     const remaining = payload.exp - Math.floor(Date.now() / 1000);
     if (remaining > 0 && remaining < REFRESH_THRESHOLD_SECONDS) {
@@ -55,6 +72,19 @@ export async function middleware(req: NextRequest) {
   }
 
   return res;
+}
+
+function applyHeaders(
+  req: NextRequest,
+  payload: { sub: string; username: string; role: string } | null
+): NextResponse {
+  const headers = new Headers(req.headers);
+  if (payload) {
+    headers.set("x-user-id", payload.sub);
+    headers.set("x-user-username", payload.username);
+    headers.set("x-user-role", payload.role);
+  }
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {
