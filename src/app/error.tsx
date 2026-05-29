@@ -6,13 +6,18 @@ import { AlertTriangle, RotateCw } from "lucide-react";
 
 export default function Error({
   error,
-  unstable_retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  unstable_retry: () => void;
+  reset: () => void;
 }) {
   useEffect(() => {
-    console.error(JSON.stringify({ level: "error", message: "client_error_boundary", error: error.message, digest: error.digest }));
+    console.error(JSON.stringify({
+      level: "error",
+      message: "client_error_boundary",
+      error: error.message,
+      digest: error.digest,
+    }));
   }, [error]);
 
   return (
@@ -26,7 +31,7 @@ export default function Error({
           An unexpected error occurred. You can retry or head back to the feed.
         </p>
         <div className="flex items-center justify-center gap-3">
-          <Button onClick={() => unstable_retry()} className="gap-2">
+          <Button onClick={reset} className="gap-2">
             <RotateCw className="w-4 h-4" /> Try again
           </Button>
           <Link href="/feed">
