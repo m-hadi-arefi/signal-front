@@ -85,7 +85,7 @@ function SearchResults() {
             <Link
               key={s.id}
               href={`/signals/${s.id}`}
-              className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/3 hover:border-indigo-500/30 transition-colors"
+              className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl border border-white/10 bg-white/3 hover:border-indigo-500/30 transition-colors"
             >
               <Badge variant="outline" className="font-mono shrink-0">{s.symbol}</Badge>
               <div className="min-w-0">
@@ -101,7 +101,7 @@ function SearchResults() {
             <Link
               key={u.id}
               href={`/profile/${u.username}`}
-              className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/3 hover:border-indigo-500/30 transition-colors"
+              className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl border border-white/10 bg-white/3 hover:border-indigo-500/30 transition-colors"
             >
               <Avatar src={u.avatar} username={u.username} size="md" />
               <div className="min-w-0">

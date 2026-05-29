@@ -75,13 +75,13 @@ export default function ProfilePage() {
       )}
 
       {/* Profile header */}
-      <div className="rounded-2xl border border-white/10 bg-white/3 p-6 mb-6">
-        <div className="flex items-start gap-4">
+      <div className="rounded-2xl border border-white/10 bg-white/3 p-4 sm:p-6 mb-6">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           <Avatar src={user.avatar} username={user.username} size="xl" />
-          <div className="flex-1">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-white">{user.username}</h1>
+          <div className="flex-1 min-w-0 w-full">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">{user.username}</h1>
                 {isOfficial && (
                   <span className="inline-flex items-center gap-1 text-xs text-indigo-400 bg-indigo-600/20 px-2 py-0.5 rounded-full">
                     <Shield className="w-3 h-3" />
@@ -102,7 +102,7 @@ export default function ProfilePage() {
               ) : null}
             </div>
             {user.bio && <p className="text-sm text-white/60 mb-3">{user.bio}</p>}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-white/40">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-white/40">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 Joined {formatDate(user.createdAt)}

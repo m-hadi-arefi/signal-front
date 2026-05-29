@@ -64,7 +64,7 @@ function CommentItem({
             <span className="text-xs text-white/30">{formatRelative(comment.createdAt)}</span>
           </div>
           <p className="text-sm text-white/80 leading-relaxed">{comment.content}</p>
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center gap-2 sm:gap-4 mt-2 flex-wrap">
             <button onClick={handleLike} className={cn("flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors", liked && "text-red-400")}>
               <Heart className={cn("w-3.5 h-3.5", liked && "fill-current")} />
               {likeCount > 0 && <span>{likeCount}</span>}
@@ -84,7 +84,7 @@ function CommentItem({
       </div>
 
       {comment.replies && comment.replies.length > 0 && (
-        <div className="ml-10 mt-3">
+        <div className="ml-6 sm:ml-10 mt-3">
           <button onClick={() => setShowReplies(!showReplies)} className="text-xs text-indigo-400 flex items-center gap-1 mb-2">
             {showReplies ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             {comment.replies.length} {comment.replies.length === 1 ? "reply" : "replies"}

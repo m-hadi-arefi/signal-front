@@ -46,7 +46,7 @@ export function FilterBar({
       </button>
 
       <div className={cn("px-4 pb-4 space-y-4", !expanded && "hidden md:block")}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs text-white/50 mb-1.5">Symbol</label>
             <Input

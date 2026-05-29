@@ -86,14 +86,14 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0d0d14] shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0d0d14] shadow-2xl mx-2 sm:mx-0">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">Post New Signal</h2>
           <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-white/50 mb-1.5">Symbol *</label>
               <Input placeholder="BTC, ETH..." value={form.symbol} onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })} required />
@@ -116,7 +116,7 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
 
           <div className="p-4 rounded-xl border border-white/10 bg-white/3 space-y-4">
             <p className="text-sm font-medium text-white">Scenario</p>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-white/50 mb-1.5">Direction *</label>
                 <select
@@ -147,7 +147,7 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-white/50 mb-1.5">Entry Point *</label>
                 <Input type="number" placeholder="65000" value={form.entryPoint} onChange={(e) => setForm({ ...form, entryPoint: e.target.value })} required />

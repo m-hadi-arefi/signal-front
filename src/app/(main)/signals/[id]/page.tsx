@@ -129,9 +129,9 @@ export default function SignalDetailPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Feed
       </Link>
 
-      <div className="rounded-2xl border border-white/10 bg-white/3 p-6 mb-6">
+      <div className="rounded-2xl border border-white/10 bg-white/3 p-4 sm:p-6 mb-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex items-start justify-between gap-2 sm:gap-4 mb-5">
           <div className="flex items-center gap-3">
             <Link href={`/profile/${signal.author.username}`}>
               <Avatar src={signal.author.avatar} username={signal.author.username} size="lg" />
@@ -150,10 +150,10 @@ export default function SignalDetailPage() {
               <p className="text-xs text-white/40">{formatRelative(signal.createdAt)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Badge variant="outline" className="font-mono">{signal.symbol}</Badge>
             {signal.currentMarketPrice && (
-              <span className="text-sm font-mono text-white/60">${signal.currentMarketPrice.toLocaleString()}</span>
+              <span className="hidden sm:inline text-sm font-mono text-white/60">${signal.currentMarketPrice.toLocaleString()}</span>
             )}
             {canModify && (
               <div className="relative">
@@ -221,8 +221,8 @@ export default function SignalDetailPage() {
 
         {/* Scenarios */}
         {signal.scenarios.map((scenario, i) => (
-          <div key={scenario.id} className="mb-4 p-5 rounded-xl border border-white/10 bg-white/3">
-            <div className="flex items-center justify-between mb-4">
+          <div key={scenario.id} className="mb-4 p-3 sm:p-5 rounded-xl border border-white/10 bg-white/3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-white">Scenario {i + 1}</span>
                 <Badge
@@ -237,7 +237,7 @@ export default function SignalDetailPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
               <div className="p-3 rounded-lg bg-white/5">
                 <p className="text-xs text-white/40 mb-1">Entry Point</p>
                 <p className="font-mono font-semibold text-white">{scenario.entryPoint.toLocaleString()}</p>
@@ -282,7 +282,7 @@ export default function SignalDetailPage() {
       </div>
 
       {/* Comments */}
-      <div className="rounded-2xl border border-white/10 bg-white/3 p-6">
+      <div className="rounded-2xl border border-white/10 bg-white/3 p-4 sm:p-6">
         <CommentSection signalId={id} />
       </div>
     </div>
