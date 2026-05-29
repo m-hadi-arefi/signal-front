@@ -7,11 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { SignalCard } from "@/components/signals/SignalCard";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ProfileEditModal } from "@/components/profile/ProfileEditModal";
+import { FollowButton } from "@/components/profile/FollowButton";
+import { PasswordChange } from "@/components/profile/PasswordChange";
+import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/utils";
-import { Calendar, BarChart2, Heart, Shield } from "lucide-react";
+import { Calendar, BarChart2, Heart, Shield, Pencil, Users } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const { user: authUser, refresh } = useAuth();
+  const [editing, setEditing] = useState(false);
   const [user, setUser] = useState<UserPublic | null>(null);
   const [signals, setSignals] = useState<SignalData[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -50,25 +57,52 @@ export default function ProfilePage() {
   if (!user) return <div className="text-center py-32 text-white/40">User not found</div>;
 
   const isOfficial = user.role === "ADMIN" || user.role === "ANALYST";
+  const isOwn = user.isSelf ?? authUser?.id === user.id;
 
   return (
     <div className="max-w-2xl mx-auto">
+      {editing && (
+        <ProfileEditModal
+          username={user.username}
+          initialBio={user.bio}
+          initialAvatar={user.avatar}
+          onClose={() => setEditing(false)}
+          onSaved={({ bio, avatar }) => {
+            setUser((u) => (u ? { ...u, bio, avatar } : u));
+            refresh();
+          }}
+        />
+      )}
+
       {/* Profile header */}
       <div className="rounded-2xl border border-white/10 bg-white/3 p-6 mb-6">
         <div className="flex items-start gap-4">
           <Avatar src={user.avatar} username={user.username} size="xl" />
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-white">{user.username}</h1>
-              {isOfficial && (
-                <span className="inline-flex items-center gap-1 text-xs text-indigo-400 bg-indigo-600/20 px-2 py-0.5 rounded-full">
-                  <Shield className="w-3 h-3" />
-                  {user.role === "ADMIN" ? "Admin" : "Analyst"}
-                </span>
-              )}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-white">{user.username}</h1>
+                {isOfficial && (
+                  <span className="inline-flex items-center gap-1 text-xs text-indigo-400 bg-indigo-600/20 px-2 py-0.5 rounded-full">
+                    <Shield className="w-3 h-3" />
+                    {user.role === "ADMIN" ? "Admin" : "Analyst"}
+                  </span>
+                )}
+              </div>
+              {isOwn ? (
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-2">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </Button>
+              ) : authUser ? (
+                <FollowButton
+                  username={user.username}
+                  initialFollowing={user.isFollowing ?? false}
+                  initialFollowers={user._count?.followers ?? 0}
+                />
+              ) : null}
             </div>
             {user.bio && <p className="text-sm text-white/60 mb-3">{user.bio}</p>}
-            <div className="flex items-center gap-4 text-sm text-white/40">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-white/40">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5" />
                 Joined {formatDate(user.createdAt)}
@@ -81,10 +115,16 @@ export default function ProfilePage() {
                 <Heart className="w-3.5 h-3.5" />
                 {user._count?.likes ?? 0} likes
               </span>
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" />
+                {user._count?.followers ?? 0} followers · {user._count?.following ?? 0} following
+              </span>
             </div>
           </div>
         </div>
       </div>
+
+      {isOwn && <PasswordChange />}
 
       {/* Signals */}
       <h2 className="text-base font-semibold text-white mb-4">Signals</h2>

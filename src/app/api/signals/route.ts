@@ -43,24 +43,52 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50);
   const symbol = searchParams.get("symbol");
   const official = searchParams.get("official") === "true";
+  const direction = searchParams.get("direction");
+  const sort = searchParams.get("sort") === "popular" ? "popular" : "latest";
+  const minConfidence = parseInt(searchParams.get("minConfidence") || "0");
+  const following = searchParams.get("following") === "true";
   const userId = req.headers.get("x-user-id");
 
+  const hasFilters =
+    !!direction || sort === "popular" || minConfidence > 0 || following;
+
+  // Only the simple (cacheable) anonymous case uses Redis.
   const cacheKey = `feed:${official}:${symbol || "all"}:${cursor || "start"}:${limit}`;
-  const cached = await getCache<SignalData[]>(cacheKey);
-  if (cached && !userId) {
-    return NextResponse.json({ data: cached, nextCursor: null });
+  if (!userId && !hasFilters) {
+    const cached = await getCache<SignalData[]>(cacheKey);
+    if (cached) return NextResponse.json({ data: cached, nextCursor: null });
   }
 
   const where: Record<string, unknown> = {};
   if (symbol) where.symbol = symbol.toUpperCase();
   if (official) where.author = { role: { in: ["ADMIN", "ANALYST"] } };
 
+  const scenarioConditions: Record<string, unknown> = {};
+  if (direction) scenarioConditions.direction = direction;
+  if (minConfidence > 0) scenarioConditions.confidence = { gte: minConfidence };
+  if (Object.keys(scenarioConditions).length > 0) {
+    where.scenarios = { some: scenarioConditions };
+  }
+
+  if (following && userId) {
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    where.authorId = { in: follows.map((f) => f.followingId) };
+  }
+
+  const orderBy =
+    sort === "popular"
+      ? [{ likes: { _count: "desc" as const } }, { createdAt: "desc" as const }]
+      : { createdAt: "desc" as const };
+
   const signals = await prisma.signal.findMany({
     where,
     take: limit + 1,
     skip: cursor ? 1 : 0,
     cursor: cursor ? { id: cursor } : undefined,
-    orderBy: { createdAt: "desc" },
+    orderBy,
     select: SELECT_SIGNAL,
   });
 
@@ -88,7 +116,7 @@ export async function GET(req: NextRequest) {
   }));
 
   const nextCursor = hasNext ? data[data.length - 1].id : null;
-  if (!userId) await setCache(cacheKey, data, CACHE_TTL.SIGNALS_FEED);
+  if (!userId && !hasFilters) await setCache(cacheKey, data, CACHE_TTL.SIGNALS_FEED);
 
   return NextResponse.json({ data, nextCursor });
 }

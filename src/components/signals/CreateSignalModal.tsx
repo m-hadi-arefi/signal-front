@@ -3,13 +3,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, ChevronDown } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { apiFetch } from "@/lib/api-client";
 
 interface CreateSignalModalProps {
   onSuccess?: () => void;
 }
 
 export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,7 +37,7 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/signals", {
+      const res = await apiFetch("/api/signals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,9 +62,11 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
       if (!res.ok) {
         const { error: e } = await res.json();
         setError(e || "Failed to create signal");
+        if (res.status !== 429) toast.error(e || "Failed to create signal");
         return;
       }
 
+      toast.success("Signal posted");
       setOpen(false);
       onSuccess?.();
     } catch {

@@ -5,12 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Zap, User, LogOut, Menu, X, Bell } from "lucide-react";
+import { TrendingUp, Zap, LogOut, Menu, X, Bookmark } from "lucide-react";
 import { useState } from "react";
+import { SearchBar } from "./SearchBar";
 
 const NAV_LINKS = [
   { href: "/feed", label: "Feed", icon: TrendingUp },
   { href: "/official", label: "Official Signals", icon: Zap },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
 ];
 
 export function Navbar() {
@@ -46,6 +48,8 @@ export function Navbar() {
           ))}
         </nav>
 
+        <SearchBar className="hidden md:block flex-1 max-w-xs" />
+
         <div className="flex items-center gap-2">
           {!loading && user ? (
             <>
@@ -74,6 +78,7 @@ export function Navbar() {
 
       {mobileOpen && (
         <div className="md:hidden border-t border-white/10 bg-black/90 px-4 py-3 space-y-1">
+          <SearchBar className="mb-2" onNavigate={() => setMobileOpen(false)} />
           {NAV_LINKS.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

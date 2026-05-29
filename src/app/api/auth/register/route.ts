@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken, createAuthCookie } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   const rl = await rateLimit(req, "register", 5, 300);
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
       data: { email, username, passwordHash },
     });
 
+    logger.info("auth_register", { userId: user.id, username: user.username });
     const token = await signToken({ sub: user.id, username: user.username, role: user.role });
     const res = NextResponse.json({ success: true, user: { id: user.id, username: user.username, role: user.role } });
     res.cookies.set(createAuthCookie(token));

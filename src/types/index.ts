@@ -11,7 +11,9 @@ export interface UserPublic {
   bio: string | null;
   role: Role;
   createdAt: string;
-  _count?: { signals: number; likes: number };
+  _count?: { signals: number; likes: number; followers?: number; following?: number };
+  isFollowing?: boolean;
+  isSelf?: boolean;
 }
 
 export interface ScenarioData {

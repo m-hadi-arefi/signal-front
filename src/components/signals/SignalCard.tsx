@@ -4,29 +4,39 @@ import { SignalData } from "@/types";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatRelative, directionColor, confidenceColor, cn } from "@/lib/utils";
-import { Heart, MessageCircle, TrendingUp, TrendingDown, Minus, Shield } from "lucide-react";
+import { formatRelative, confidenceColor, cn } from "@/lib/utils";
+import { Heart, MessageCircle, Shield, Bookmark, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/ui/toast";
+import { apiFetch } from "@/lib/api-client";
 
 interface SignalCardProps {
-  signal: SignalData;
+  signal: SignalData & { isBookmarked?: boolean };
   onLike?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function SignalCard({ signal, onLike }: SignalCardProps) {
+export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
+  const { user } = useAuth();
+  const toast = useToast();
   const [liked, setLiked] = useState(signal.isLiked ?? false);
   const [likeCount, setLikeCount] = useState(signal._count?.likes ?? 0);
+  const [bookmarked, setBookmarked] = useState(signal.isBookmarked ?? false);
   const [loading, setLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   const scenario = signal.scenarios?.[0];
   const isOfficial = signal.author.role === "ADMIN" || signal.author.role === "ANALYST";
+  const canModify = !!user && (user.id === signal.author.id || user.role === "ADMIN");
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/signals/${signal.id}/like`, { method: "POST" });
+      const res = await apiFetch(`/api/signals/${signal.id}/like`, { method: "POST" });
       if (res.ok) {
         const { liked: newLiked, count } = await res.json();
         setLiked(newLiked);
@@ -37,6 +47,36 @@ export function SignalCard({ signal, onLike }: SignalCardProps) {
       setLoading(false);
     }
   };
+
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Sign in to bookmark");
+      return;
+    }
+    const res = await apiFetch(`/api/signals/${signal.id}/bookmark`, { method: "POST" });
+    if (res.ok) {
+      const { bookmarked: b } = await res.json();
+      setBookmarked(b);
+      toast.success(b ? "Bookmarked" : "Bookmark removed");
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(false);
+    if (!confirm("Delete this signal?")) return;
+    const res = await apiFetch(`/api/signals/${signal.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setDeleted(true);
+      toast.success("Signal deleted");
+      onDelete?.(signal.id);
+    } else {
+      toast.error("Failed to delete");
+    }
+  };
+
+  if (deleted) return null;
 
   return (
     <Link href={`/signals/${signal.id}`} className="block group">
@@ -65,6 +105,30 @@ export function SignalCard({ signal, onLike }: SignalCardProps) {
               >
                 {scenario.direction === "LONG" ? "▲ LONG" : scenario.direction === "SHORT" ? "▼ SHORT" : "— NEUTRAL"}
               </Badge>
+            )}
+            {canModify && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMenuOpen((o) => !o);
+                  }}
+                  className="text-white/40 hover:text-white p-1"
+                  aria-label="Options"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 mt-1 w-32 rounded-lg border border-white/10 bg-[#0d0d14] shadow-xl z-20 py-1">
+                    <button
+                      onClick={handleDelete}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-white/5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -105,6 +169,13 @@ export function SignalCard({ signal, onLike }: SignalCardProps) {
               <MessageCircle className="w-4 h-4" />
               <span>{signal._count?.comments ?? 0}</span>
             </span>
+            <button
+              onClick={handleBookmark}
+              className={cn("flex items-center gap-1.5 text-xs hover:text-white transition-colors", bookmarked && "text-indigo-400")}
+              aria-label="Bookmark"
+            >
+              <Bookmark className={cn("w-4 h-4", bookmarked && "fill-current")} />
+            </button>
           </div>
           {scenario && (
             <span className={cn("text-xs font-semibold", confidenceColor(scenario.confidence))}>

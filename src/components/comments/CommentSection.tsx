@@ -5,28 +5,52 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelative, cn } from "@/lib/utils";
-import { Heart, Reply, ChevronDown, ChevronUp } from "lucide-react";
+import { Heart, Reply, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { useMqtt } from "@/hooks/useMqtt";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/ui/toast";
+import { apiFetch } from "@/lib/api-client";
 import { Spinner } from "@/components/ui/spinner";
 
 interface CommentSectionProps {
   signalId: string;
 }
 
-function CommentItem({ comment, onReply }: { comment: CommentData; onReply: (id: string, username: string) => void }) {
+function CommentItem({
+  comment,
+  onReply,
+  onDelete,
+}: {
+  comment: CommentData;
+  onReply: (id: string, username: string) => void;
+  onDelete: (id: string) => void;
+}) {
   const { user } = useAuth();
+  const toast = useToast();
   const [liked, setLiked] = useState(comment.isLiked ?? false);
   const [likeCount, setLikeCount] = useState(comment._count?.likes ?? 0);
   const [showReplies, setShowReplies] = useState(false);
 
+  const canDelete = !!user && (user.id === comment.author.id || user.role === "ADMIN");
+
   const handleLike = async () => {
     if (!user) return;
-    const res = await fetch(`/api/comments/${comment.id}/like`, { method: "POST" });
+    const res = await apiFetch(`/api/comments/${comment.id}/like`, { method: "POST" });
     if (res.ok) {
       const { liked: l, count } = await res.json();
       setLiked(l);
       setLikeCount(count);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this comment?")) return;
+    const res = await apiFetch(`/api/comments/${comment.id}`, { method: "DELETE" });
+    if (res.ok) {
+      onDelete(comment.id);
+      toast.success("Comment deleted");
+    } else {
+      toast.error("Failed to delete");
     }
   };
 
@@ -50,6 +74,11 @@ function CommentItem({ comment, onReply }: { comment: CommentData; onReply: (id:
                 <Reply className="w-3.5 h-3.5" /> Reply
               </button>
             )}
+            {canDelete && (
+              <button onClick={handleDelete} className="text-xs text-white/40 hover:text-red-400 transition-colors flex items-center gap-1">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -63,7 +92,7 @@ function CommentItem({ comment, onReply }: { comment: CommentData; onReply: (id:
           {showReplies && (
             <div className="space-y-3 border-l border-white/10 pl-3">
               {comment.replies.map((reply) => (
-                <CommentItem key={reply.id} comment={reply} onReply={onReply} />
+                <CommentItem key={reply.id} comment={reply} onReply={onReply} onDelete={onDelete} />
               ))}
             </div>
           )}
@@ -75,14 +104,23 @@ function CommentItem({ comment, onReply }: { comment: CommentData; onReply: (id:
 
 export function CommentSection({ signalId }: CommentSectionProps) {
   const { user } = useAuth();
+  const toast = useToast();
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [content, setContent] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; username: string } | null>(null);
 
+  const removeComment = useCallback((id: string) => {
+    setComments((prev) =>
+      prev
+        .filter((c) => c.id !== id)
+        .map((c) => ({ ...c, replies: (c.replies || []).filter((r) => r.id !== id) }))
+    );
+  }, []);
+
   const fetchComments = useCallback(async () => {
-    const res = await fetch(`/api/signals/${signalId}/comments`);
+    const res = await apiFetch(`/api/signals/${signalId}/comments`);
     if (res.ok) {
       const { data } = await res.json();
       setComments(data);
@@ -93,7 +131,11 @@ export function CommentSection({ signalId }: CommentSectionProps) {
   useEffect(() => { fetchComments(); }, [fetchComments]);
 
   useMqtt([`comments/${signalId}`], (_, payload: unknown) => {
-    const event = payload as { type: string; payload: CommentData };
+    const event = payload as { type: string; payload: CommentData & { commentId?: string } };
+    if (event.type === "COMMENT_DELETED") {
+      removeComment(event.payload.commentId!);
+      return;
+    }
     if (event.type === "NEW_COMMENT") {
       const newComment = event.payload;
       if (newComment.parentId) {
@@ -118,7 +160,7 @@ export function CommentSection({ signalId }: CommentSectionProps) {
     if (!content.trim() || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/signals/${signalId}/comments`, {
+      const res = await apiFetch(`/api/signals/${signalId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: content.trim(), parentId: replyTo?.id }),
@@ -126,6 +168,10 @@ export function CommentSection({ signalId }: CommentSectionProps) {
       if (res.ok) {
         setContent("");
         setReplyTo(null);
+        toast.success("Comment posted");
+      } else {
+        const { error } = await res.json().catch(() => ({ error: "Failed to post comment" }));
+        toast.error(error || "Failed to post comment");
       }
     } finally {
       setSubmitting(false);
@@ -168,6 +214,7 @@ export function CommentSection({ signalId }: CommentSectionProps) {
               key={comment.id}
               comment={comment}
               onReply={(id, username) => setReplyTo({ id, username })}
+              onDelete={removeComment}
             />
           ))}
           {comments.length === 0 && (
