@@ -22,7 +22,7 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
     symbol: "",
     rawText: "",
     aiSummary: "",
-    currentMarketPrice: "",
+    latestPrice: "",
     source: "",
     direction: "LONG" as "LONG" | "SHORT" | "NEUTRAL",
     entryPoint: "",
@@ -46,7 +46,7 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
           symbol: form.symbol,
           rawText: form.rawText,
           aiSummary: form.aiSummary || undefined,
-          currentMarketPrice: form.currentMarketPrice ? parseFloat(form.currentMarketPrice) : undefined,
+          latestPrice: form.latestPrice ? parseFloat(form.latestPrice) : undefined,
           source: form.source || undefined,
           scenarios: [{
             direction: form.direction,
@@ -102,7 +102,7 @@ export function CreateSignalModal({ onSuccess }: CreateSignalModalProps) {
             </div>
             <div>
               <label className="block text-xs text-white/50 mb-1.5">{t("signal.current_price")}</label>
-              <Input type="number" placeholder="65000" value={form.currentMarketPrice} onChange={(e) => setForm({ ...form, currentMarketPrice: e.target.value })} />
+              <Input type="number" placeholder="65000" value={form.latestPrice} onChange={(e) => setForm({ ...form, latestPrice: e.target.value })} />
             </div>
           </div>
 

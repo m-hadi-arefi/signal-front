@@ -5,21 +5,27 @@ import { invalidateCache, getCache, setCache, CACHE_TTL } from "@/lib/redis";
 import { publishMqttEvent, MQTT_TOPICS } from "@/lib/mqtt-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { SignalData } from "@/types";
+import { getServerT } from "@/lib/i18n-server";
 
 const SELECT_SIGNAL = {
   id: true,
   symbol: true,
   rawText: true,
   aiSummary: true,
-  currentMarketPrice: true,
+  latestPrice: true,
+  createdPrice: true,
+  active: true,
+  activeExternalScenarioId: true,
   source: true,
   status: true,
+  fromService: true,
   createdAt: true,
   analyzedAt: true,
   author: { select: { id: true, username: true, avatar: true, bio: true, role: true, createdAt: true } },
   scenarios: {
     select: {
       id: true,
+      externalId: true,
       direction: true,
       entryPoint: true,
       entryType: true,
@@ -29,15 +35,21 @@ const SELECT_SIGNAL = {
       confidence: true,
       reasoning: true,
       status: true,
+      active: true,
+      expiresAt: true,
       raw: true,
       createdAt: true,
-      result: true,
+      performance: true,
     },
   },
   _count: { select: { comments: true, likes: true } },
 };
 
 export async function GET(req: NextRequest) {
+  const t = getServerT(req);
+  const userId = req.headers.get("x-user-id");
+  if (!userId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
   const parsedLimit = parseInt(searchParams.get("limit") || "20", 10);
@@ -49,14 +61,11 @@ export async function GET(req: NextRequest) {
   const parsedConf = parseInt(searchParams.get("minConfidence") || "0", 10);
   const minConfidence = Number.isFinite(parsedConf) ? Math.max(0, Math.min(100, parsedConf)) : 0;
   const following = searchParams.get("following") === "true";
-  const userId = req.headers.get("x-user-id");
 
-  const hasFilters =
-    !!direction || sort === "popular" || minConfidence > 0 || following;
+  const hasFilters = !!direction || sort === "popular" || minConfidence > 0 || following;
 
-  // Only the simple (cacheable) anonymous case uses Redis.
   const cacheKey = `feed:${official}:${symbol || "all"}:${cursor || "start"}:${limit}`;
-  if (!userId && !hasFilters) {
+  if (!hasFilters) {
     const cached = await getCache<SignalData[]>(cacheKey);
     if (cached) return NextResponse.json({ data: cached, nextCursor: null });
   }
@@ -112,41 +121,50 @@ export async function GET(req: NextRequest) {
     scenarios: s.scenarios.map((sc) => ({
       ...sc,
       createdAt: sc.createdAt.toISOString(),
+      expiresAt: sc.expiresAt?.toISOString() ?? null,
       takeProfits: sc.takeProfits as number[],
+      performance: sc.performance
+        ? {
+            ...sc.performance,
+            activationTime: sc.performance.activationTime?.toISOString() ?? null,
+            stopLossHitAt: sc.performance.stopLossHitAt?.toISOString() ?? null,
+            updatedAt: sc.performance.updatedAt.toISOString(),
+          }
+        : null,
     })),
     isLiked: likedIds.has(s.id),
   }));
 
   const nextCursor = hasNext ? data[data.length - 1].id : null;
-  if (!userId && !hasFilters) await setCache(cacheKey, data, CACHE_TTL.SIGNALS_FEED);
+  if (!hasFilters) await setCache(cacheKey, data, CACHE_TTL.SIGNALS_FEED);
 
   return NextResponse.json({ data, nextCursor });
 }
 
 export async function POST(req: NextRequest) {
+  const t = getServerT(req);
   const userId = req.headers.get("x-user-id");
-  const username = req.headers.get("x-user-username");
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
 
   const rl = await rateLimit(req, "signal-create", 10, 3600);
-  if (!rl.success) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  if (!rl.success) return NextResponse.json({ error: t("too_many_requests") }, { status: 429 });
 
   try {
     const body = await req.json();
     const parsed = signalSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ error: t("signal_invalid_input") }, { status: 400 });
     }
 
-    const { symbol, rawText, aiSummary, currentMarketPrice, source, scenarios } = parsed.data;
+    const { symbol, rawText, aiSummary, latestPrice, source, scenarios } = parsed.data;
 
     const signal = await prisma.signal.create({
       data: {
         symbol: symbol.toUpperCase(),
         rawText,
         aiSummary,
-        currentMarketPrice,
-        source,
+        latestPrice,
+        source: source ? { type: source } : undefined,
         authorId: userId,
         analyzedAt: new Date(),
         scenarios: {
@@ -174,7 +192,9 @@ export async function POST(req: NextRequest) {
       scenarios: signal.scenarios.map((sc) => ({
         ...sc,
         createdAt: sc.createdAt.toISOString(),
+        expiresAt: sc.expiresAt?.toISOString() ?? null,
         takeProfits: sc.takeProfits as number[],
+        performance: null,
       })),
       isLiked: false,
     };
@@ -188,6 +208,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ data: payload }, { status: 201 });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Failed to create signal" }, { status: 500 });
+    return NextResponse.json({ error: t("signal_create_failed") }, { status: 500 });
   }
 }

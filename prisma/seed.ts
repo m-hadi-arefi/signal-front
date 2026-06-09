@@ -31,7 +31,7 @@ async function main() {
       symbol: "BTC",
       rawText: "Bitcoin is forming a strong ascending triangle on the 4H chart. Volume is increasing with each touch of resistance at $68,500. RSI divergence shows bullish momentum. Looking for a breakout above $68,500 with volume confirmation.",
       aiSummary: "BTC forming bullish ascending triangle near $68,500 resistance. Breakout expected with strong volume confirmation.",
-      currentMarketPrice: 67800,
+      createdPrice: 67800,
       source: "Internal Analysis",
       authorId: admin.id,
       analyzedAt: new Date(),

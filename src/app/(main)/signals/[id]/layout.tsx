@@ -15,7 +15,7 @@ export async function generateMetadata({
     if (!signal) {
       return { title: "Signal not found — SignalPro" };
     }
-    const desc = (signal.aiSummary || signal.rawText).slice(0, 160);
+    const desc = (signal.aiSummary || signal.rawText || "").slice(0, 160);
     const title = `${signal.symbol} signal by ${signal.author.username} — SignalPro`;
     return {
       title,

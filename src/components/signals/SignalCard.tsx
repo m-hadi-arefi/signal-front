@@ -4,8 +4,8 @@ import { SignalData } from "@/types";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatRelative, confidenceColor, cn } from "@/lib/utils";
-import { Heart, MessageCircle, Shield, Bookmark, MoreVertical, Trash2 } from "lucide-react";
+import { formatRelative, cn } from "@/lib/utils";
+import { Heart, MessageCircle, Shield, Bookmark, MoreVertical, Trash2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
@@ -16,20 +16,21 @@ interface SignalCardProps {
   signal: SignalData & { isBookmarked?: boolean };
   onLike?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onBookmarkChange?: (id: string, bookmarked: boolean) => void;
 }
 
-export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
+export function SignalCard({ signal, onLike, onDelete, onBookmarkChange }: SignalCardProps) {
   const { user } = useAuth();
   const toast = useToast();
   const { t } = useLanguage();
   const [liked, setLiked] = useState(signal.isLiked ?? false);
   const [likeCount, setLikeCount] = useState(signal._count?.likes ?? 0);
   const [bookmarked, setBookmarked] = useState(signal.isBookmarked ?? false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleted, setDeleted] = useState(false);
 
-  const scenario = signal.scenarios?.[0];
   const isOfficial = signal.author.role === "ADMIN" || signal.author.role === "ANALYST";
   const canModify = !!user && (user.id === signal.author.id || user.role === "ADMIN");
 
@@ -52,8 +53,25 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
   const handleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!user) { toast.error(t("signal.sign_in_to_bookmark")); return; }
-    const res = await apiFetch(`/api/signals/${signal.id}/bookmark`, { method: "POST" });
-    if (res.ok) { const { bookmarked: b } = await res.json(); setBookmarked(b); }
+    if (bookmarkLoading) return;
+    // Optimistic update
+    const prev = bookmarked;
+    setBookmarked(!bookmarked);
+    setBookmarkLoading(true);
+    try {
+      const res = await apiFetch(`/api/signals/${signal.id}/bookmark`, { method: "POST" });
+      if (res.ok) {
+        const { bookmarked: confirmed } = await res.json();
+        setBookmarked(confirmed);
+        onBookmarkChange?.(signal.id, confirmed);
+      } else {
+        setBookmarked(prev); // revert on error
+      }
+    } catch {
+      setBookmarked(prev); // revert on network error
+    } finally {
+      setBookmarkLoading(false);
+    }
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -65,6 +83,12 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
   };
 
   if (deleted) return null;
+
+  const activeScenario = signal.activeExternalScenarioId != null
+    ? (signal.scenarios?.find((s) => s.externalId === signal.activeExternalScenarioId) ?? signal.scenarios?.[0])
+    : signal.scenarios?.find((s) => s.active) ?? signal.scenarios?.[0];
+
+  const scenario = activeScenario ?? signal.scenarios?.[0];
 
   const dirLabel = scenario?.direction === "LONG"
     ? `▲ ${t("signal.long")}`
@@ -117,23 +141,49 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
         </div>
 
         <p className="text-sm text-white/80 line-clamp-3 mb-4 leading-relaxed">
-          {signal.aiSummary || signal.rawText}
+          {signal.aiSummary || signal.rawText || scenario?.reasoning}
         </p>
 
         {scenario && (
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 p-2 sm:p-3 rounded-lg bg-white/5 border border-white/5">
-            <div>
-              <p className="text-xs text-white/40 mb-1">{t("signal.entry")}</p>
-              <p className="text-sm font-mono font-semibold text-white">{scenario.entryPoint.toLocaleString()}</p>
-            </div>
+            {scenario.entryPoint != null ? (
+              <div>
+                <p className="text-xs text-white/40 mb-1">{t("signal.entry")}</p>
+                <p className="text-sm font-mono font-semibold text-white">{scenario.entryPoint.toLocaleString()}</p>
+              </div>
+            ) : scenario.performance?.activationPrice != null ? (
+              <div>
+                <p className="text-xs text-white/40 mb-1">{t("signal.entry")}</p>
+                <p className="text-sm font-mono font-semibold text-indigo-300">{scenario.performance.activationPrice.toLocaleString()}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs text-white/40 mb-1">{t("signal.entry")}</p>
+                <p className="text-sm font-mono text-white/40">-</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-white/40 mb-1">{t("signal.tp")}1</p>
-              <p className="text-sm font-mono font-semibold text-green-400">{scenario.takeProfits[0]?.toLocaleString() ?? "-"}</p>
+              <p className="text-sm font-mono font-semibold text-green-400">{(scenario.takeProfits as number[])[0]?.toLocaleString() ?? "-"}</p>
             </div>
-            <div>
-              <p className="text-xs text-white/40 mb-1">{t("signal.sl")}</p>
-              <p className="text-sm font-mono font-semibold text-red-400">{scenario.stopLoss.toLocaleString()}</p>
-            </div>
+            {scenario.stopLoss != null ? (
+              <div>
+                <p className="text-xs text-white/40 mb-1">{t("signal.sl")}</p>
+                <p className="text-sm font-mono font-semibold text-red-400">{scenario.stopLoss.toLocaleString()}</p>
+              </div>
+            ) : scenario.performance?.statusPercentNow != null ? (
+              <div>
+                <p className="text-xs text-white/40 mb-1">PnL</p>
+                <p className={`text-sm font-mono font-semibold ${parseFloat(scenario.performance.statusPercentNow) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {parseFloat(scenario.performance.statusPercentNow) >= 0 ? "+" : ""}{parseFloat(scenario.performance.statusPercentNow).toFixed(2)}%
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs text-white/40 mb-1">{t("signal.sl")}</p>
+                <p className="text-sm font-mono text-white/40">-</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -150,9 +200,13 @@ export function SignalCard({ signal, onLike, onDelete }: SignalCardProps) {
           </div>
           <button
             onClick={handleBookmark}
-            className={cn("text-white/40 hover:text-white transition-colors", bookmarked && "text-indigo-400")}
+            disabled={bookmarkLoading}
+            className={cn("text-white/40 hover:text-white transition-colors", bookmarked && "text-indigo-400", bookmarkLoading && "opacity-60")}
           >
-            <Bookmark className={cn("w-4 h-4", bookmarked && "fill-current")} />
+            {bookmarkLoading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Bookmark className={cn("w-4 h-4", bookmarked && "fill-current")} />
+            }
           </button>
         </div>
       </div>

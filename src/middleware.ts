@@ -3,28 +3,22 @@ import { verifyToken, signToken, createAuthCookie } from "./lib/auth";
 
 const PUBLIC_PATHS = ["/", "/login", "/register"];
 
-// API routes that don't need auth (read-only public data)
-// These prefixes allow read-only (GET/HEAD) access without authentication.
-// POST/PATCH/DELETE always require a verified token regardless of prefix.
-const PUBLIC_API_PREFIXES = [
-  "/api/auth/",
-  "/api/mqtt/auth",
-  "/api/health",
-  "/api/signals",
-  "/api/search",
-  "/api/users/",
+// API routes fully public (all methods, no auth required)
+const PUBLIC_API_PREFIXES_ALL_METHODS = [
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/register",
+  "/api/mqtt/auth", // Called by EMQX broker — not by browsers
+  // NOTE: /api/health is intentionally excluded — requires auth
 ];
+
+// API routes that allow read-only (GET/HEAD) access without authentication.
+const PUBLIC_API_PREFIXES: string[] = [];
 
 const READ_ONLY_METHODS = ["GET", "HEAD"];
 
 // Page routes accessible without login
-const PUBLIC_PAGE_PREFIXES = [
-  "/feed",
-  "/official",
-  "/signals/",
-  "/profile/",
-  "/search",
-];
+const PUBLIC_PAGE_PREFIXES: string[] = [];
 
 const REFRESH_THRESHOLD_SECONDS = 48 * 60 * 60;
 
@@ -34,6 +28,9 @@ export async function middleware(req: NextRequest) {
   if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {
+    if (PUBLIC_API_PREFIXES_ALL_METHODS.some((p) => pathname.startsWith(p))) {
+      return applyHeaders(req, null);
+    }
     if (
       PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p)) &&
       READ_ONLY_METHODS.includes(req.method)

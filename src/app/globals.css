@@ -59,3 +59,8 @@ option {
   background-color: #1a1a2e;
   color: white;
 }
+
+/* PWA / iOS safe area utilities */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

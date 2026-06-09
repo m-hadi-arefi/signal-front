@@ -1,11 +1,45 @@
 "use client";
 import { useState } from "react";
+import { Eye, EyeOff, KeyRound, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api-client";
-import { KeyRound, ChevronDown, ChevronUp } from "lucide-react";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { changePasswordSchema } from "@/lib/validations";
+import { zodIssueToClientMessage } from "@/lib/i18n-client";
+
+function PasswordInput({
+  placeholder,
+  value,
+  onChange,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pr-10"
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="absolute inset-y-0 right-3 flex items-center text-white/40 hover:text-white/70 transition-colors"
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
 
 export function PasswordChange() {
   const toast = useToast();
@@ -18,7 +52,21 @@ export function PasswordChange() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (next !== confirm) { toast.error(t("password.mismatch")); return; }
+
+    // Client-side validation before sending to server
+    if (next !== confirm) {
+      toast.error(t("password.mismatch"));
+      return;
+    }
+    const parsed = changePasswordSchema.safeParse({
+      currentPassword: current,
+      newPassword: next,
+    });
+    if (!parsed.success) {
+      toast.error(zodIssueToClientMessage(parsed.error.issues[0], t));
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await apiFetch("/api/auth/change-password", {
@@ -30,10 +78,12 @@ export function PasswordChange() {
         toast.success(t("password.changed"));
         setCurrent(""); setNext(""); setConfirm(""); setOpen(false);
       } else {
-        const { error } = await res.json().catch(() => ({ error: "Failed" }));
-        toast.error(error || "Failed to change password");
+        const { error } = await res.json().catch(() => ({ error: "" }));
+        toast.error(error || t("errors.network"));
       }
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -49,9 +99,21 @@ export function PasswordChange() {
       </button>
       {open && (
         <form onSubmit={submit} className="px-5 pb-5 space-y-3">
-          <Input type="password" placeholder={t("password.current")} value={current} onChange={(e) => setCurrent(e.target.value)} required />
-          <Input type="password" placeholder={t("password.new_pass")} value={next} onChange={(e) => setNext(e.target.value)} required />
-          <Input type="password" placeholder={t("password.confirm")} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+          <PasswordInput
+            placeholder={t("password.current")}
+            value={current}
+            onChange={setCurrent}
+          />
+          <PasswordInput
+            placeholder={t("password.new_pass")}
+            value={next}
+            onChange={setNext}
+          />
+          <PasswordInput
+            placeholder={t("password.confirm")}
+            value={confirm}
+            onChange={setConfirm}
+          />
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={saving}>
               {saving ? t("password.saving") : t("password.update")}

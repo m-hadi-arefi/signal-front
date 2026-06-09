@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { commentSchema } from "@/lib/validations";
 import { publishMqttEvent, MQTT_TOPICS } from "@/lib/mqtt-server";
 import { rateLimit } from "@/lib/rate-limit";
+import { getServerT } from "@/lib/i18n-server";
 
 const SELECT_COMMENT = {
   id: true,
@@ -26,8 +27,11 @@ const SELECT_COMMENT = {
 };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = getServerT(req);
   const { id: signalId } = await params;
+  // Defense-in-depth: middleware already enforces auth, but double-check here.
   const userId = req.headers.get("x-user-id");
+  if (!userId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
 
   const comments = await prisma.comment.findMany({
     where: { signalId, status: "ACTIVE", parentId: null },
@@ -62,21 +66,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = getServerT(req);
   const { id: signalId } = await params;
   const userId = req.headers.get("x-user-id");
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
 
   const rl = await rateLimit(req, "comment", 20, 60);
-  if (!rl.success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  if (!rl.success) return NextResponse.json({ error: t("too_many_requests") }, { status: 429 });
 
   const body = await req.json();
   const parsed = commentSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t("invalid_input") }, { status: 400 });
 
   const { content, parentId } = parsed.data;
 
   const signal = await prisma.signal.findUnique({ where: { id: signalId }, select: { id: true, authorId: true } });
-  if (!signal) return NextResponse.json({ error: "Signal not found" }, { status: 404 });
+  if (!signal) return NextResponse.json({ error: t("signal_not_found") }, { status: 404 });
 
   if (parentId) {
     const parent = await prisma.comment.findUnique({
@@ -84,7 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       select: { signalId: true, parentId: true, status: true },
     });
     if (!parent || parent.signalId !== signalId || parent.status !== "ACTIVE" || parent.parentId !== null) {
-      return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
+      return NextResponse.json({ error: t("invalid_parent_comment") }, { status: 400 });
     }
   }
 

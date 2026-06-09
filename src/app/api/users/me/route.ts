@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { profileUpdateSchema } from "@/lib/validations";
 import { invalidateCache } from "@/lib/redis";
-import { withLogging } from "@/lib/logger";
+import { withLogging } from "@/lib/logger-middleware";
+import { getServerT } from "@/lib/i18n-server";
 
 export const PATCH = withLogging(async (req: NextRequest) => {
+  const t = getServerT(req);
   const userId = req.headers.get("x-user-id");
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
 
   const body = await req.json();
   const parsed = profileUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    return NextResponse.json({ error: t("invalid_input") }, { status: 400 });
   }
 
   const { bio, avatar } = parsed.data;

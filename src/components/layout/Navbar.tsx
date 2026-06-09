@@ -5,8 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Zap, LogOut, Menu, X, Bookmark } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, Zap, LogOut, Bookmark, Trophy } from "lucide-react";
 import { SearchBar } from "./SearchBar";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -14,13 +13,13 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 export function Navbar() {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const { t } = useLanguage();
 
   const NAV_LINKS = [
     { href: "/feed", label: t("nav.feed"), icon: TrendingUp },
     { href: "/official", label: t("nav.official"), icon: Zap },
     { href: "/bookmarks", label: t("nav.bookmarks"), icon: Bookmark },
+    { href: "/traders", label: t("nav.traders"), icon: Trophy },
   ];
 
   return (
@@ -71,42 +70,10 @@ export function Navbar() {
             </div>
           ) : null}
 
-          <button
-            className="md:hidden p-2 text-white/60 hover:text-white"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Hamburger hidden on mobile — replaced by BottomNav */}
         </div>
       </div>
 
-      {mobileOpen && (
-        <div className="md:hidden border-t border-white/10 bg-black/90 px-4 py-3 space-y-1">
-          <SearchBar className="mb-2" onNavigate={() => setMobileOpen(false)} />
-          {NAV_LINKS.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
-                pathname.startsWith(href) ? "bg-indigo-600/20 text-indigo-400" : "text-white/60"
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </Link>
-          ))}
-          <div className="flex items-center justify-between px-3 py-2">
-            <LanguageSwitcher />
-            {user && (
-              <button onClick={logout} className="flex items-center gap-2 text-sm text-red-400">
-                <LogOut className="w-4 h-4" /> {t("nav.logout")}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   );
 }

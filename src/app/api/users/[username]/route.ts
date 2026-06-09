@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCache, setCache, CACHE_TTL } from "@/lib/redis";
+import { getServerT } from "@/lib/i18n-server";
 
 interface CachedProfile {
   id: string;
@@ -13,8 +14,12 @@ interface CachedProfile {
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
-  const { username } = await params;
+  const t = getServerT(req);
+  // Defense-in-depth: middleware already enforces auth, but double-check here.
   const viewerId = req.headers.get("x-user-id");
+  if (!viewerId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
+
+  const { username } = await params;
   const cacheKey = `profile:${username}`;
   let data = await getCache<CachedProfile>(cacheKey);
 
@@ -32,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       },
     });
 
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user) return NextResponse.json({ error: t("user_not_found") }, { status: 404 });
 
     data = { ...user, createdAt: user.createdAt.toISOString() };
     await setCache(cacheKey, data, CACHE_TTL.USER_PROFILE);

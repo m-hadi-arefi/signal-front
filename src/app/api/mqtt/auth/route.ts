@@ -17,10 +17,11 @@ export async function POST(req: NextRequest) {
 
   const { username, password } = body;
 
-  const serverUser = process.env.EMQX_MQTT_USERNAME || "server";
-  const serverPass = process.env.EMQX_MQTT_PASSWORD || "server-mqtt-password";
-  const clientUser = process.env.NEXT_PUBLIC_MQTT_USERNAME || "client";
-  const clientPass = process.env.NEXT_PUBLIC_MQTT_PASSWORD || "client-mqtt-password";
+  const serverUser = process.env.EMQX_MQTT_USERNAME ?? "server";
+  const serverPass = process.env.EMQX_MQTT_PASSWORD ?? "server-mqtt-password";
+  // MQTT_CLIENT_USERNAME/PASSWORD are server-only vars — never use NEXT_PUBLIC here
+  const clientUser = process.env.MQTT_CLIENT_USERNAME ?? "client";
+  const clientPass = process.env.MQTT_CLIENT_PASSWORD ?? "client-mqtt-password";
 
   const allowed =
     (username === serverUser && password === serverPass) ||

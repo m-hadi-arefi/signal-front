@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withLogging } from "@/lib/logger";
+import { withLogging } from "@/lib/logger-middleware";
 import { publishMqttEvent, MQTT_TOPICS } from "@/lib/mqtt-server";
 import { invalidateCache } from "@/lib/redis";
+import { getServerT } from "@/lib/i18n-server";
 
 export const POST = withLogging(
   async (req: NextRequest, { params }: { params: Promise<{ username: string }> }) => {
+    const t = getServerT(req);
     const { username } = await params;
     const userId = req.headers.get("x-user-id");
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
 
     const target = await prisma.user.findUnique({ where: { username }, select: { id: true } });
-    if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!target) return NextResponse.json({ error: t("user_not_found") }, { status: 404 });
     if (target.id === userId) {
-      return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 });
+      return NextResponse.json({ error: t("cannot_follow_yourself") }, { status: 400 });
     }
 
     const existing = await prisma.follow.findUnique({

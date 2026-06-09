@@ -22,6 +22,7 @@ enum EntryType {
   MARKET
   LIMIT
   STOP
+  FIX
 }
 
 enum SignalStatus {
@@ -32,6 +33,8 @@ enum SignalStatus {
 
 enum ScenarioStatus {
   ACTIVE
+  RUNNING
+  CANCELLED
   INVALIDATED
   HIT_TP
   HIT_SL
@@ -93,19 +96,24 @@ model Bookmark {
 }
 
 model Signal {
-  id                 String      @id @default(cuid())
-  symbol             String
-  traceId            String?     @unique
-  source             String?
-  rawText            String
-  aiSummary          String?
-  currentMarketPrice Float?
-  authorId           String
-  author             User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  status             SignalStatus @default(OPEN)
-  createdAt          DateTime    @default(now())
-  analyzedAt         DateTime?
-  updatedAt          DateTime    @updatedAt
+  id                       String       @id @default(cuid())
+  symbol                   String
+  traceId                  String?      @unique
+  source                   Json?
+  fromService              Boolean      @default(false)
+  externalId               Int?
+  rawText                  String?
+  aiSummary                String?
+  latestPrice              Float?
+  createdPrice             Float?
+  active                   Boolean      @default(true)
+  activeExternalScenarioId Int?
+  authorId                 String
+  author                   User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  status                   SignalStatus  @default(OPEN)
+  createdAt                DateTime     @default(now())
+  analyzedAt               DateTime?
+  updatedAt                DateTime     @updatedAt
 
   scenarios Scenario[]
   comments  Comment[]
@@ -116,40 +124,58 @@ model Signal {
   @@index([symbol])
   @@index([createdAt(sort: Desc)])
   @@index([status])
+  @@index([fromService, externalId])
 }
 
 model Scenario {
-  id           String         @id @default(cuid())
+  id           String          @id @default(cuid())
   signalId     String
-  signal       Signal         @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  signal       Signal          @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  externalId   Int?
   direction    Direction
-  entryPoint   Float
-  entryType    EntryType      @default(LIMIT)
+  entryPoint   Float?
+  entryType    EntryType       @default(LIMIT)
   takeProfits  Json
-  stopLoss     Float
+  stopLoss     Float?
   invalidation String?
-  confidence   Int
+  confidence   Int?
   reasoning    String
-  status       ScenarioStatus @default(ACTIVE)
+  status       ScenarioStatus  @default(ACTIVE)
+  active       Boolean         @default(true)
+  expiresAt    DateTime?
   raw          String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
-  result ScenarioResult?
+  performance ScenarioPerformance?
 
   @@index([signalId])
 }
 
-model ScenarioResult {
-  id          String   @id @default(cuid())
-  scenarioId  String   @unique
-  scenario    Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  result      String
-  pnlPercent  Float?
-  hitTp       Int?
-  hitSl       Boolean  @default(false)
-  maxDrawdown Float?
-  evaluatedAt DateTime @default(now())
+model ScenarioPerformance {
+  id                     String    @id @default(cuid())
+  scenarioId             String    @unique
+  scenario               Scenario  @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  activationTime         DateTime?
+  activationPrice        Float?
+  signalAgeSeconds       Float?
+  isProfit               Boolean   @default(false)
+  isLoss                 Boolean   @default(false)
+  statusPercentNow       String?
+  highestPriceReached    Float?
+  lowestPriceReached     Float?
+  maxProfitPercent       String?
+  maxDrawdownPercent     String?
+  targetsHit             Json      @default("[]")
+  targetsHitAt           Json      @default("[]")
+  stopLossHit            Boolean   @default(false)
+  stopLossHitAt          DateTime?
+  targetsCompletedCount  Int       @default(0)
+  totalTargetsCount      Int       @default(0)
+  successProgressPercent Float?
+  priceHistory           Json      @default("[]")
+  eventHistory           Json      @default("[]")
+  updatedAt              DateTime  @updatedAt
 }
 
 model Comment {

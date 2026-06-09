@@ -5,8 +5,7 @@ export const registerSchema = z.object({
   username: z
     .string()
     .min(3, "Min 3 chars")
-    .max(32, "Max 32 chars")
-    .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, underscores"),
+    .max(32, "Max 32 chars"),
   password: z
     .string()
     .min(8, "Min 8 chars")
@@ -21,20 +20,20 @@ export const loginSchema = z.object({
 
 export const signalSchema = z.object({
   symbol: z.string().min(1).max(20).toUpperCase(),
-  rawText: z.string().min(10).max(5000),
+  rawText: z.string().min(10).max(5000).optional(),
   aiSummary: z.string().max(1000).optional(),
-  currentMarketPrice: z.number().positive().optional(),
+  latestPrice: z.number().positive().optional(),
   source: z.string().max(200).optional(),
   scenarios: z
     .array(
       z.object({
         direction: z.enum(["LONG", "SHORT", "NEUTRAL"]),
-        entryPoint: z.number().positive(),
-        entryType: z.enum(["MARKET", "LIMIT", "STOP"]).default("LIMIT"),
+        entryPoint: z.number().positive().optional(),
+        entryType: z.enum(["MARKET", "LIMIT", "STOP", "FIX"]).default("LIMIT"),
         takeProfits: z.array(z.number().positive()).min(1).max(10),
-        stopLoss: z.number().positive(),
+        stopLoss: z.number().positive().optional(),
         invalidation: z.string().max(500).optional(),
-        confidence: z.number().int().min(0).max(100),
+        confidence: z.number().int().min(0).max(100).optional(),
         reasoning: z.string().min(10).max(2000),
         raw: z.string().max(5000).optional(),
       })

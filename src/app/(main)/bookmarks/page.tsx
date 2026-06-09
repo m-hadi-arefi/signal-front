@@ -60,7 +60,12 @@ export default function BookmarksPage() {
       <div className="space-y-4">
         {signals.length === 0 && <p className="text-center py-16 text-white/30">{t("bookmarks.empty")}</p>}
         {signals.map((s) => (
-          <SignalCard key={s.id} signal={s} onDelete={(id) => setSignals((prev) => prev.filter((x) => x.id !== id))} />
+          <SignalCard
+            key={s.id}
+            signal={s}
+            onDelete={(id) => setSignals((prev) => prev.filter((x) => x.id !== id))}
+            onBookmarkChange={(id, bm) => { if (!bm) setSignals((prev) => prev.filter((x) => x.id !== id)); }}
+          />
         ))}
         {nextCursor && (
           <button onClick={loadMore} disabled={loadingMore} className="w-full py-3 text-sm text-indigo-400 hover:text-indigo-300">

@@ -8,7 +8,7 @@ export function useMqtt(topics: string[], onMessage: (topic: string, payload: un
 
   useEffect(() => {
     const client = getMqttClient();
-    client.connect();
+    void client.connect();
 
     const unsubs = topics.map((topic) =>
       client.subscribe(topic, (t, payload) => onMessageRef.current(t, payload))
