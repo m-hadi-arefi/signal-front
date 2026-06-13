@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api-client";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useAnalytics, EVENTS } from "@/components/providers/AnalyticsProvider";
 
 interface SignalCardProps {
   signal: SignalData & { isBookmarked?: boolean };
@@ -23,6 +24,7 @@ export function SignalCard({ signal, onLike, onDelete, onBookmarkChange }: Signa
   const { user } = useAuth();
   const toast = useToast();
   const { t } = useLanguage();
+  const { track } = useAnalytics();
   const [liked, setLiked] = useState(signal.isLiked ?? false);
   const [likeCount, setLikeCount] = useState(signal._count?.likes ?? 0);
   const [bookmarked, setBookmarked] = useState(signal.isBookmarked ?? false);
@@ -45,6 +47,7 @@ export function SignalCard({ signal, onLike, onDelete, onBookmarkChange }: Signa
         const { liked: newLiked, count } = await res.json();
         setLiked(newLiked);
         setLikeCount(count);
+        track(EVENTS.FAVORITE, { signal_id: signal.id, action: newLiked ? 'add' : 'remove' });
         onLike?.(signal.id);
       }
     } finally { setLoading(false); }
@@ -63,6 +66,7 @@ export function SignalCard({ signal, onLike, onDelete, onBookmarkChange }: Signa
       if (res.ok) {
         const { bookmarked: confirmed } = await res.json();
         setBookmarked(confirmed);
+        track(EVENTS.BOOKMARK, { signal_id: signal.id, action: confirmed ? 'add' : 'remove' });
         onBookmarkChange?.(signal.id, confirmed);
       } else {
         setBookmarked(prev); // revert on error
@@ -97,7 +101,11 @@ export function SignalCard({ signal, onLike, onDelete, onBookmarkChange }: Signa
     : `— ${t("signal.neutral")}`;
 
   return (
-    <Link href={`/signals/${signal.id}`} className="block group">
+    <Link
+      href={`/signals/${signal.id}`}
+      className="block group"
+      onClick={() => track(EVENTS.OPEN_SIGNAL, { signal_id: signal.id, signal_type: signal.symbol, source: 'feed' })}
+    >
       <div className="rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-3 sm:p-5 hover:border-indigo-500/40 hover:bg-white/8 transition-all duration-200">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">

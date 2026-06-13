@@ -4,9 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Zap, TrendingUp, Shield, Users, BarChart2, ChevronRight } from "lucide-react";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { useAnalytics, EVENTS } from "@/components/providers/AnalyticsProvider";
+import { useEffect } from "react";
 
 export default function LandingPage() {
   const { t } = useLanguage();
+  const { track } = useAnalytics();
+
+  useEffect(() => {
+    track(EVENTS.LANDING_VIEW);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const FEATURES = [
     { icon: TrendingUp, title: t("landing.feature_realtime_title"), desc: t("landing.feature_realtime_desc") },

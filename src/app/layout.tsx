@@ -6,6 +6,8 @@ import { ToastProvider } from "@/components/ui/toast";
 import { LanguageProvider } from "@/components/providers/LanguageProvider";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import { InstallModal } from "@/components/pwa/InstallModal";
+import { AnalyticsProvider } from "@/components/providers/AnalyticsProvider";
+import { Suspense } from "react";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
@@ -33,9 +35,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <LanguageProvider>
           <ToastProvider>
             <AuthProvider>
-              <ServiceWorkerRegistrar />
-              <InstallModal />
-              {children}
+              <Suspense>
+                <AnalyticsProvider>
+                  <ServiceWorkerRegistrar />
+                  <InstallModal />
+                  {children}
+                </AnalyticsProvider>
+              </Suspense>
             </AuthProvider>
           </ToastProvider>
         </LanguageProvider>

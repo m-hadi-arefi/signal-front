@@ -9,10 +9,12 @@ import { apiFetch } from "@/lib/api-client";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { registerSchema } from "@/lib/validations";
 import { zodIssueToClientMessage } from "@/lib/i18n-client";
+import { useAnalytics, EVENTS } from "@/components/providers/AnalyticsProvider";
 
 export function RegisterForm() {
   const toast = useToast();
   const { t } = useLanguage();
+  const { track } = useAnalytics();
   const [form, setForm] = useState({ email: "", username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,6 +44,7 @@ export function RegisterForm() {
         if (res.status !== 429) toast.error(data.error || t("auth.network_error"));
         return;
       }
+      track(EVENTS.SIGNUP, { method: 'email' });
       window.location.href = "/feed";
     } catch {
       setError(t("auth.network_error"));

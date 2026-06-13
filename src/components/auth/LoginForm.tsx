@@ -8,10 +8,12 @@ import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api-client";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { loginSchema } from "@/lib/validations";
+import { useAnalytics, EVENTS } from "@/components/providers/AnalyticsProvider";
 
 export function LoginForm() {
   const toast = useToast();
   const { t } = useLanguage();
+  const { track } = useAnalytics();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +43,7 @@ export function LoginForm() {
         if (res.status !== 429) toast.error(data.error || t("auth.network_error"));
         return;
       }
+      track(EVENTS.LOGIN, { method: 'email' });
       // Hard redirect so the browser sends the fresh cookie to middleware
       // and useAuthProvider reloads user state cleanly on the feed page.
       window.location.href = "/feed";
